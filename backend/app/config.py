@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,15 @@ class Settings(BaseSettings):
     # Link checks (each runs a full yt-dlp extraction) at once.
     max_concurrent_resolves: int = 4
     max_file_mb: int = 2048
+    # Playlists and carousels: items per job (more are truncated), and caps for the whole job.
+    max_playlist_items: int = Field(50, ge=1, le=200)
+    max_job_mb: int = 4096
+    job_timeout_seconds: int = 3600
+    # Uploaded cookies.txt (login sessions) per platform.
+    cookie_max_kb: int = 256
+    # gallery-dl runs as a separate program (GPL-2.0-only, not imported).
+    gallery_dl_bin: str = "gallery-dl"
+    gallery_dl_timeout: int = 300
     cors_origins: list[str] = ["http://localhost:5173"]
 
 

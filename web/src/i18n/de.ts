@@ -14,7 +14,7 @@ export const de = {
   'url.submit': 'Link prüfen',
   'url.pasteDenied': 'Kein Zugriff auf die Zwischenablage. Füge den Link direkt ins Feld ein.',
   'home.hint':
-    'Füge einen Link von YouTube oder SoundCloud ein oder teile ihn aus einer anderen App an OpenTakez.',
+    'Füge einen Link von YouTube, TikTok, Instagram, Facebook oder SoundCloud ein oder teile ihn aus einer anderen App an OpenTakez.',
   'home.resolving': 'Link wird geprüft …',
 
   'preview.format': 'Format',
@@ -73,4 +73,38 @@ export const de = {
   'error.network':
     'Server nicht erreichbar. Prüfe deine Verbindung oder die Server-URL in den Einstellungen.',
   'error.unknown': 'Etwas ist schiefgelaufen ({status}).',
+
+  'option.image-original': 'Original',
+  'option.group.image': 'Fotos',
+
+  'media.items': '{count} Elemente',
+  'media.truncated': 'Nur die ersten {count} von {total} Elementen werden geladen.',
+
+  'job.saveZip': 'Alle als ZIP speichern',
+  'job.saveFile': '{name} speichern',
+  'job.files': '{count} Dateien',
+
+  'error.loginRequired': 'Dafür ist ein Login nötig. Lade in den Einstellungen Cookies für {platform} hoch.',
+  'error.busy': 'Der Server ist ausgelastet. Versuch es gleich noch einmal.',
+
+  'settings.cookies.title': 'Logins (Cookies)',
+  'settings.cookies.intro':
+    'Manche Inhalte, etwa Instagram-Fotos und Storys, gibt es nur mit Login. Lade dafür eine aus deinem Browser exportierte cookies.txt für die Plattform hoch.',
+  'settings.cookies.warning':
+    'Der Server nutzt diesen Login für Downloads. Plattformen können so genutzte Accounts drosseln oder sperren, nimm deshalb einen Zweit-Account. Die Datei bleibt auf dem Server, bis du sie löschst.',
+  'settings.cookies.howto':
+    'Exportiere sie eingeloggt mit einer Browser-Erweiterung, die cookies.txt (Netscape-Format) speichert.',
+  'settings.cookies.upload': 'cookies.txt hochladen',
+  'settings.cookies.replace': 'Ersetzen',
+  'settings.cookies.delete': 'Löschen',
+  'settings.cookies.deleteConfirm': 'Den {platform}-Login vom Server löschen?',
+  'settings.cookies.none': 'Kein Login',
+  'settings.cookies.present': 'Eingeloggt · {count} Cookies',
+  'settings.cookies.expires': 'Läuft ab am {date}',
+  'settings.cookies.expired': 'Abgelaufen, lade eine neue Datei hoch',
+  'settings.cookies.uploaded': 'Hochgeladen am {date}',
+  'settings.cookies.ignored': '{count} Cookies anderer Seiten wurden ignoriert.',
+  'settings.cookies.tooLarge': 'Die Datei ist zu groß für eine cookies.txt.',
+  'settings.cookies.insecure':
+    'Hochladen ist über eine unverschlüsselte Verbindung gesperrt. Nutze HTTPS, damit der Login nicht abgefangen werden kann.',
 } satisfies Record<MessageKey, string>

@@ -9,6 +9,8 @@ from pydantic import BaseModel
 class MediaKind(StrEnum):
     VIDEO = "video"
     AUDIO = "audio"
+    # Photos, including carousels that mix photos and videos.
+    IMAGE = "image"
 
 
 class DownloadOption(StrEnum):
@@ -17,9 +19,11 @@ class DownloadOption(StrEnum):
     VIDEO_720 = "video-720"
     AUDIO_MP3 = "audio-mp3"
     AUDIO_M4A = "audio-m4a"
+    IMAGE_ORIGINAL = "image-original"
 
 
 AUDIO_OPTIONS = [DownloadOption.AUDIO_MP3, DownloadOption.AUDIO_M4A]
+IMAGE_OPTIONS = [DownloadOption.IMAGE_ORIGINAL]
 VIDEO_OPTIONS = [
     DownloadOption.VIDEO_BEST,
     DownloadOption.VIDEO_1080,
@@ -37,6 +41,9 @@ class MediaInfo(BaseModel):
     thumbnail: str | None = None
     duration: float | None = None
     options: list[DownloadOption]
+    # Items that will be downloaded (None for a single item) and how many the source has.
+    item_count: int | None = None
+    total_items: int | None = None
 
 
 class Progress(BaseModel):
@@ -50,7 +57,14 @@ ProgressCallback = Callable[[Progress], None]
 
 
 class ProviderError(Exception):
-    """A platform could not resolve or download a URL. The message is shown to the user."""
+    """A platform could not resolve or download a URL. The message is shown to the user.
+
+    `code` lets the app react to known cases, e.g. "login_required" → point to cookie upload.
+    """
+
+    def __init__(self, message: str, code: str | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 class Provider(Protocol):

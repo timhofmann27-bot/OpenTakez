@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { Icon } from './Icon'
+import type { MediaInfo } from '../lib/types'
+import { Icon, type IconName } from './Icon'
 
-type Props = { src?: string | null; kind: 'video' | 'audio'; className?: string }
+type Props = { src?: string | null; kind: MediaInfo['kind']; className?: string }
 
-/** Fixed aspect ratio (16:9 video, 1:1 audio) so layout doesn't jump while the image loads. */
+const placeholder: Record<MediaInfo['kind'], IconName> = { video: 'film', audio: 'music', image: 'image' }
+
+/** Fixed aspect ratio (16:9 video, 1:1 audio/photos) so layout doesn't jump while loading. */
 export function Thumbnail({ src, kind, className = '' }: Props) {
   const [failed, setFailed] = useState(false)
   const aspect = kind === 'video' ? 'aspect-video' : 'aspect-square'
@@ -20,7 +23,7 @@ export function Thumbnail({ src, kind, className = '' }: Props) {
         />
       ) : (
         <div className="grid size-full place-items-center text-muted">
-          <Icon name={kind === 'video' ? 'film' : 'music'} className="size-1/3 max-h-10" />
+          <Icon name={placeholder[kind]} className="size-1/3 max-h-10" />
         </div>
       )}
     </div>

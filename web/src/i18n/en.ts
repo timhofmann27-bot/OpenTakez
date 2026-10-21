@@ -11,7 +11,7 @@ export const en = {
   'url.clear': 'Clear',
   'url.submit': 'Check link',
   'url.pasteDenied': 'Clipboard access denied. Paste into the field instead.',
-  'home.hint': 'Paste a link from YouTube or SoundCloud, or share it to OpenTakez from another app.',
+  'home.hint': 'Paste a link from YouTube, TikTok, Instagram, Facebook, or SoundCloud, or share it to OpenTakez from another app.',
   'home.resolving': 'Checking link …',
 
   'preview.format': 'Format',
@@ -69,6 +69,40 @@ export const en = {
   'error.unsupported': 'This site isn’t supported yet.',
   'error.network': 'Server unreachable. Check your connection or the server URL in Settings.',
   'error.unknown': 'Something went wrong ({status}).',
+
+  'option.image-original': 'Original',
+  'option.group.image': 'Photos',
+
+  'media.items': '{count} items',
+  'media.truncated': 'Only the first {count} of {total} items will be downloaded.',
+
+  'job.saveZip': 'Save all as ZIP',
+  'job.saveFile': 'Save {name}',
+  'job.files': '{count} files',
+
+  'error.loginRequired': 'This needs a login. Upload cookies for {platform} in Settings.',
+  'error.busy': 'The server is busy. Try again in a moment.',
+
+  'settings.cookies.title': 'Logins (cookies)',
+  'settings.cookies.intro':
+    'Some content, like Instagram photos and stories, is only available when logged in. Upload a cookies.txt exported from your browser for that platform.',
+  'settings.cookies.warning':
+    'The server uses this login for downloads. Platforms can rate-limit or ban accounts used this way, so use a secondary account. The file stays on the server until you delete it.',
+  'settings.cookies.howto':
+    'Export with a browser extension that saves cookies.txt (Netscape format) while logged in.',
+  'settings.cookies.upload': 'Upload cookies.txt',
+  'settings.cookies.replace': 'Replace',
+  'settings.cookies.delete': 'Delete',
+  'settings.cookies.deleteConfirm': 'Delete the {platform} login from the server?',
+  'settings.cookies.none': 'No login',
+  'settings.cookies.present': 'Logged in · {count} cookies',
+  'settings.cookies.expires': 'Expires {date}',
+  'settings.cookies.expired': 'Expired, upload a new file',
+  'settings.cookies.uploaded': 'Uploaded {date}',
+  'settings.cookies.ignored': '{count} cookies for other sites were ignored.',
+  'settings.cookies.tooLarge': 'That file is too large for a cookies.txt.',
+  'settings.cookies.insecure':
+    'Uploads are disabled over an unencrypted connection. Use HTTPS so the login can’t be intercepted.',
 } as const
 
 export type MessageKey = keyof typeof en
