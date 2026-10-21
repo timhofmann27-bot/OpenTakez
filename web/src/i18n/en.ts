@@ -83,6 +83,7 @@ export const en = {
 
   'error.loginRequired': 'This needs a login. Upload cookies for {platform} in Settings.',
   'error.loginRequiredGeneric': 'This needs a login. Upload cookies in Settings.',
+  'error.rateLimited': 'Too many requests. Try again in {seconds} s.',
   'error.busy': 'The server is busy. Try again in a moment.',
 
   'settings.cookies.title': 'Logins (cookies)',

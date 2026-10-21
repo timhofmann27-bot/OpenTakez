@@ -87,6 +87,7 @@ export const de = {
 
   'error.loginRequired': 'Dafür ist ein Login nötig. Lade in den Einstellungen Cookies für {platform} hoch.',
   'error.loginRequiredGeneric': 'Dafür ist ein Login nötig. Lade in den Einstellungen Cookies hoch.',
+  'error.rateLimited': 'Zu viele Anfragen. Versuch es in {seconds} s noch einmal.',
   'error.busy': 'Der Server ist ausgelastet. Versuch es gleich noch einmal.',
 
   'settings.cookies.title': 'Logins (Cookies)',
