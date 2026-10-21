@@ -22,7 +22,8 @@ HTTPS (for example behind Caddy, Traefik, or a Cloudflare Tunnel).
 
 ## Development
 
-Requirements: Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node 24 with pnpm, ffmpeg.
+Requirements: Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node 24 with pnpm, ffmpeg, and
+[Deno](https://deno.com) (yt-dlp needs a JavaScript runtime for YouTube).
 
 ```sh
 # Backend on :8000
@@ -41,7 +42,28 @@ Checks:
 ```sh
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run pytest
 cd web && pnpm lint && pnpm build
+
+# Real downloads from YouTube and SoundCloud (needs network)
+cd backend && uv run pytest -m slow
 ```
+
+## API
+
+All endpoints except `/api/health` need the token when `OPENTAKEZ_TOKEN` is set, either as
+`Authorization: Bearer <token>` or as `?token=<token>`.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/health` | Version, supported platforms, whether a token is required |
+| POST | `/api/resolve` | `{"url"}` → title, thumbnail, duration, download options |
+| POST | `/api/jobs` | `{"url", "option"}` → start a download job |
+| GET | `/api/jobs/{id}` | Job status and progress |
+| GET | `/api/jobs/{id}/events` | Server-sent events with the job state until it finishes |
+| GET | `/api/jobs/{id}/file` | The downloaded file |
+| DELETE | `/api/jobs/{id}` | Delete a finished job and its file |
+
+`url` may be shared text that contains a link. Options: `video-best`, `video-1080`, `video-720`,
+`audio-mp3`, `audio-m4a`.
 
 ## Project layout
 

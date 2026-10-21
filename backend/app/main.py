@@ -1,3 +1,7 @@
+import asyncio
+import contextlib
+from collections.abc import AsyncIterator
+from datetime import timedelta
 from importlib.metadata import version
 
 from fastapi import FastAPI, HTTPException
@@ -5,9 +9,31 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app import __version__
+from app.api.routes import router
 from app.config import settings
+from app.jobs.manager import JobManager
+from app.providers import default_providers
 
-app = FastAPI(title="OpenTakez", version=__version__)
+CLEANUP_INTERVAL_SECONDS = 600
+
+
+async def _cleanup_loop(jobs: JobManager) -> None:
+    while True:
+        await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
+        jobs.cleanup(timedelta(hours=settings.file_ttl_hours))
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    app.state.providers = default_providers()
+    app.state.jobs = JobManager(settings.data_dir, settings.max_concurrent_jobs)
+    cleanup = asyncio.create_task(_cleanup_loop(app.state.jobs))
+    yield
+    cleanup.cancel()
+    app.state.jobs.shutdown()
+
+
+app = FastAPI(title="OpenTakez", version=__version__, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,12 +44,17 @@ app.add_middleware(
 
 
 @app.get("/api/health")
-def health() -> dict[str, str]:
+def health() -> dict[str, object]:
     return {
         "status": "ok",
         "version": app.version,
         "yt_dlp": version("yt-dlp"),
+        "auth_required": bool(settings.token),
+        "platforms": app.state.providers.platforms,
     }
+
+
+app.include_router(router)
 
 
 # Serve the built PWA when it's bundled (Docker image). Unknown paths fall back to

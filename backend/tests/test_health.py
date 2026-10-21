@@ -1,12 +1,7 @@
-from fastapi.testclient import TestClient
+def test_health_reports_versions_platforms_and_auth(client):
+    body = client.get("/api/health").json()
 
-from app.main import app
-
-
-def test_health_returns_ok_and_versions():
-    response = TestClient(app).get("/api/health")
-
-    assert response.status_code == 200
-    body = response.json()
     assert body["status"] == "ok"
     assert body["yt_dlp"]
+    assert body["platforms"] == ["fake"]
+    assert body["auth_required"] is False
