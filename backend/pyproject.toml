@@ -1,0 +1,31 @@
+[project]
+name = "opentakez-backend"
+version = "0.1.0"
+description = "Self-hosted media downloader backend for OpenTakez"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic-settings>=2.6",
+    "yt-dlp[default]",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx2",
+    "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: tests that hit real platforms over the network"]
+addopts = "-m 'not slow'"

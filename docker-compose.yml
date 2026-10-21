@@ -1,0 +1,11 @@
+services:
+  opentakez:
+    build: .
+    image: opentakez
+    container_name: opentakez
+    restart: unless-stopped
+    ports:
+      - "${OPENTAKEZ_PORT:-8000}:8000"
+    env_file: .env
+    volumes:
+      - ./data:/data
