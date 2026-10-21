@@ -72,6 +72,10 @@ def test_content_disposition_has_ascii_fallback_for_unicode_names():
     )
 
 
+def test_content_disposition_strips_control_characters():
+    assert 'filename="ab.mp3"' in _content_disposition("a\r\nb.mp3")
+
+
 def test_failed_job_reports_error(client, fake_provider):
     fake_provider.error = "Private video"
 

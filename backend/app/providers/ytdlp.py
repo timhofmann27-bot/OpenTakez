@@ -68,6 +68,7 @@ class YtDlpProvider:
         domains: list[str],
         extractors: list[str],
         ydl_factory: YoutubeDLFactory = YoutubeDL,
+        max_filesize: int | None = None,
     ):
         self.platform = platform
         self.domains = domains
@@ -75,6 +76,7 @@ class YtDlpProvider:
         # yt-dlp never fetches arbitrary pages.
         self.extractors = extractors
         self._ydl_factory = ydl_factory
+        self.max_filesize = max_filesize
 
     def supports(self, url: str) -> bool:
         return host_matches(url, self.domains)
@@ -86,14 +88,21 @@ class YtDlpProvider:
             "noprogress": True,
             "noplaylist": True,
             "allowed_extractors": self.extractors,
+            # A stalled platform must not hold a worker forever.
+            "socket_timeout": 20,
+            "retries": 3,
+            "extractor_retries": 2,
         }
 
     def resolve(self, url: str) -> MediaInfo:
         try:
-            with self._ydl_factory(self._base_options()) as ydl:
+            # Flat: a playlist URL returns quickly instead of extracting every entry.
+            with self._ydl_factory({**self._base_options(), "extract_flat": "in_playlist"}) as ydl:
                 info = ydl.extract_info(url, download=False)
         except DownloadError as e:
             raise ProviderError(_error_message(e)) from e
+        if info.get("_type") in ("playlist", "multi_video"):
+            raise ProviderError("Playlists aren't supported yet. Share a single video or track.")
 
         has_video = _has_video(info)
         return MediaInfo(
@@ -133,6 +142,9 @@ class YtDlpProvider:
             "paths": {"home": str(out_dir)},
             "outtmpl": "%(title).150B [%(id)s].%(ext)s",
             "windowsfilenames": True,
+            # Even if a playlist URL reaches this point, download one item at most.
+            "playlist_items": "1",
+            "max_filesize": self.max_filesize,
             "progress_hooks": [progress_hook],
             "postprocessor_hooks": [postprocessor_hook],
         }
@@ -146,5 +158,5 @@ class YtDlpProvider:
             p for p in out_dir.iterdir() if p.is_file() and p.suffix not in _TEMP_SUFFIXES
         )
         if not files:
-            raise ProviderError("Download finished but produced no file")
+            raise ProviderError("No file was downloaded. It may be larger than the size limit.")
         return files

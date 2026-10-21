@@ -1,4 +1,6 @@
 import asyncio
+import re
+import threading
 import unicodedata
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -9,7 +11,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.api.auth import require_token
-from app.jobs.manager import FINISHED, Job, JobManager
+from app.config import settings
+from app.jobs.manager import FINISHED, Job, JobManager, QueueFullError
 from app.providers import Providers, UnsupportedUrlError
 from app.providers.base import DownloadOption, MediaInfo, Provider, ProviderError
 from app.urls import extract_url
@@ -17,6 +20,10 @@ from app.urls import extract_url
 router = APIRouter(prefix="/api", dependencies=[Depends(require_token)])
 
 SSE_POLL_SECONDS = 0.5
+RESOLVE_WAIT_SECONDS = 30
+
+# Each resolve runs a full yt-dlp extraction in the threadpool; bound how many run at once.
+_resolve_slots = threading.BoundedSemaphore(settings.max_concurrent_resolves)
 
 
 def get_providers(request: Request) -> Providers:
@@ -53,7 +60,7 @@ def _provider_for(providers: Providers, text: str) -> tuple[Provider, str]:
 def _content_disposition(name: str) -> str:
     """Both forms: plain `filename` for clients that ignore the UTF-8 `filename*`."""
     fallback = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    fallback = fallback.replace('"', "").replace("\\", "") or "download"
+    fallback = re.sub(r'[\x00-\x1f\x7f"\\]', "", fallback) or "download"
     return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(name)}"
 
 
@@ -67,16 +74,25 @@ def _job_or_404(jobs: JobManager, job_id: str) -> Job:
 @router.post("/resolve")
 def resolve(body: ResolveRequest, providers: ProvidersDep) -> MediaInfo:
     provider, url = _provider_for(providers, body.url)
+    if not _resolve_slots.acquire(timeout=RESOLVE_WAIT_SECONDS):
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Server is busy, try again")
     try:
         return provider.resolve(url)
     except ProviderError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+    finally:
+        _resolve_slots.release()
 
 
 @router.post("/jobs", status_code=status.HTTP_201_CREATED)
 def create_job(body: JobRequest, providers: ProvidersDep, jobs: JobsDep) -> Job:
     provider, url = _provider_for(providers, body.url)
-    return jobs.submit(provider, url, body.option)
+    try:
+        return jobs.submit(provider, url, body.option)
+    except QueueFullError:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Too many downloads in progress, try again later"
+        ) from None
 
 
 @router.get("/jobs/{job_id}")

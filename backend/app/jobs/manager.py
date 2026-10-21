@@ -36,13 +36,17 @@ class Job(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class QueueFullError(Exception):
+    pass
+
+
 class JobManager:
     """Runs downloads in a thread pool. Jobs live in memory; each has its own directory.
 
     Jobs are short-lived (files are deleted after a TTL), so nothing survives a restart.
     """
 
-    def __init__(self, data_dir: Path, max_workers: int):
+    def __init__(self, data_dir: Path, max_workers: int, max_queued: int = 20):
         self._root = data_dir / "jobs"
         # Directories left over from a previous run have no job record anymore.
         shutil.rmtree(self._root, ignore_errors=True)
@@ -50,10 +54,14 @@ class JobManager:
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
         self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="download")
+        self._max_queued = max_queued
 
     def submit(self, provider: Provider, url: str, option: DownloadOption) -> Job:
         job = Job(id=uuid.uuid4().hex, url=url, platform=provider.platform, option=option)
         with self._lock:
+            pending = sum(j.status not in FINISHED for j in self._jobs.values())
+            if pending >= self._max_queued:
+                raise QueueFullError
             self._jobs[job.id] = job
         self._pool.submit(self._run, job.id, provider)
         return job.model_copy()

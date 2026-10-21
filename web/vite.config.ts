@@ -31,6 +31,7 @@ export default defineConfig({
     }),
   ],
   server: {
-    proxy: { '/api': 'http://localhost:8000' },
+    // Backend for `pnpm dev`; override with OPENTAKEZ_API=http://localhost:8010 pnpm dev
+    proxy: { '/api': process.env.OPENTAKEZ_API ?? 'http://localhost:8000' },
   },
 })

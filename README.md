@@ -13,12 +13,30 @@ Supported (work in progress): YouTube, TikTok, Instagram, Facebook, SoundCloud, 
 ## Run with Docker
 
 ```sh
-cp .env.example .env   # set OPENTAKEZ_TOKEN if the server is reachable from the internet
+cp .env.example .env
 docker compose up -d --build
+docker compose logs opentakez | grep token   # the generated access token
 ```
 
-Open http://localhost:8000. To install the PWA on a phone the instance must be served over
-HTTPS (for example behind Caddy, Traefik, or a Cloudflare Tunnel).
+Open http://localhost:8000 and enter the token. Set your own with `OPENTAKEZ_TOKEN` in `.env`.
+
+To install the PWA on a phone the instance must be served over HTTPS, for example behind
+Caddy, Traefik, or a Cloudflare Tunnel. Set `OPENTAKEZ_FORWARDED_ALLOW_IPS` to the proxy's IP.
+
+Then on Android: open the site in Chrome → menu → *Install app*. OpenTakez now appears in
+the *Share* sheet of YouTube, SoundCloud, and other apps.
+
+### Limits
+
+Only single videos and tracks for now; playlists and channels are refused. Files larger than
+`OPENTAKEZ_MAX_FILE_MB` are skipped, and at most `OPENTAKEZ_MAX_QUEUED_JOBS` downloads may be
+pending at once.
+
+### Updating yt-dlp
+
+Platforms change often. Rebuild or pull a newer image to get a newer yt-dlp. As a stopgap,
+`OPENTAKEZ_UPDATE_YTDLP=true` installs the latest release on every start; that skips the
+pinned, reviewed version, so leave it off unless something is broken.
 
 ## Development
 
@@ -31,17 +49,20 @@ cd backend
 uv sync
 uv run uvicorn app.main:app --reload
 
-# PWA on :5173 (proxies /api to :8000)
+# PWA on :5173 (proxies /api to :8000, or set OPENTAKEZ_API=http://localhost:8010)
 cd web
 pnpm install
 pnpm dev
 ```
 
+For local development without a token, start the backend with `OPENTAKEZ_ALLOW_NO_TOKEN=true`.
+
 Checks:
 
 ```sh
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run pytest
-cd web && pnpm lint && pnpm build
+cd web && pnpm lint && pnpm typecheck && pnpm test && pnpm build
+cd web && pnpm test:e2e   # Playwright, mocked API (first: pnpm exec playwright install chromium)
 
 # Real downloads from YouTube and SoundCloud (needs network)
 cd backend && uv run pytest -m slow
@@ -49,7 +70,7 @@ cd backend && uv run pytest -m slow
 
 ## API
 
-All endpoints except `/api/health` need the token when `OPENTAKEZ_TOKEN` is set, either as
+All endpoints except `/api/health` need the token (unless `OPENTAKEZ_ALLOW_NO_TOKEN=true`), either as
 `Authorization: Bearer <token>` or as `?token=<token>`.
 
 | Method | Path | Purpose |
@@ -69,7 +90,7 @@ All endpoints except `/api/health` need the token when `OPENTAKEZ_TOKEN` is set,
 
 ```
 backend/   FastAPI app: API, download jobs, providers (yt-dlp, Spotify)
-web/       React + Vite PWA
+web/       React + Vite PWA (design contract: docs/design/pwa-contract.md)
 android/   Native Android app (planned)
 ```
 

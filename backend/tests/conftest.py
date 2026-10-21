@@ -62,6 +62,7 @@ def fake_provider() -> FakeProvider:
 def client(tmp_path, monkeypatch, fake_provider):
     monkeypatch.setattr(settings, "data_dir", tmp_path / "data")
     monkeypatch.setattr(settings, "token", "")
+    monkeypatch.setattr(settings, "allow_no_token", True)
     with TestClient(app) as c:
         app.state.providers = Providers([fake_provider])
         yield c

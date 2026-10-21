@@ -8,8 +8,15 @@ services:
       - "${OPENTAKEZ_PORT:-8000}:8000"
     env_file: .env
     volumes:
-      # Temporary downloads only; deleted after OPENTAKEZ_FILE_TTL_HOURS.
+      # Generated token and temporary downloads (deleted after OPENTAKEZ_FILE_TTL_HOURS).
       - opentakez-data:/data
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   opentakez-data:

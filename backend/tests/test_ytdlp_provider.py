@@ -115,7 +115,7 @@ def test_download_reports_progress_and_returns_only_final_files(tmp_path):
 
 
 def test_download_without_output_is_an_error(tmp_path):
-    with pytest.raises(ProviderError, match="no file"):
+    with pytest.raises(ProviderError, match="No file was downloaded"):
         make_provider(FakeYoutubeDL()).download(
             "https://youtube.com/x", DownloadOption.AUDIO_MP3, tmp_path, lambda p: None
         )

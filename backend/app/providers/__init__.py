@@ -1,3 +1,4 @@
+from app.config import settings
 from app.providers.base import Provider
 from app.providers.ytdlp import YtDlpProvider
 
@@ -22,17 +23,20 @@ class Providers:
 
 
 def default_providers() -> Providers:
+    max_filesize = settings.max_file_mb * 1024 * 1024
     return Providers(
         [
             YtDlpProvider(
                 "youtube",
                 domains=["youtube.com", "youtu.be", "youtube-nocookie.com"],
                 extractors=["youtube(:.*)?"],
+                max_filesize=max_filesize,
             ),
             YtDlpProvider(
                 "soundcloud",
                 domains=["soundcloud.com"],
                 extractors=["soundcloud(:.*)?"],
+                max_filesize=max_filesize,
             ),
         ]
     )

@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from collections.abc import AsyncIterator
 from datetime import timedelta
 from importlib.metadata import version
@@ -13,6 +14,7 @@ from app.api.routes import router
 from app.config import settings
 from app.jobs.manager import JobManager
 from app.providers import default_providers
+from app.security import RedactTokenFilter, ensure_token, security_headers
 
 CLEANUP_INTERVAL_SECONDS = 600
 
@@ -25,8 +27,12 @@ async def _cleanup_loop(jobs: JobManager) -> None:
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    logging.getLogger("uvicorn.access").addFilter(RedactTokenFilter())
+    ensure_token(settings)
     app.state.providers = default_providers()
-    app.state.jobs = JobManager(settings.data_dir, settings.max_concurrent_jobs)
+    app.state.jobs = JobManager(
+        settings.data_dir, settings.max_concurrent_jobs, settings.max_queued_jobs
+    )
     cleanup = asyncio.create_task(_cleanup_loop(app.state.jobs))
     yield
     cleanup.cancel()
@@ -34,6 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="OpenTakez", version=__version__, lifespan=lifespan)
+
+app.middleware("http")(security_headers)
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,7 +72,10 @@ def spa(path: str) -> FileResponse:
     web_root = settings.web_dir.resolve()
     if path.startswith("api/") or not web_root.is_dir():
         raise HTTPException(status_code=404)
-    file = (web_root / path).resolve()
+    try:
+        file = (web_root / path).resolve()
+    except (ValueError, OSError):  # e.g. NUL bytes in the path
+        file = web_root
     if file.is_file() and file.is_relative_to(web_root):
         return FileResponse(file)
     return FileResponse(web_root / "index.html")
