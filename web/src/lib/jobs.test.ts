@@ -90,7 +90,18 @@ describe('jobs store', () => {
       title: 'A video',
       option: 'audio-mp3',
       fileName: 'A video [abc].mp3',
+      fileNames: ['A video [abc].mp3'],
     })
+  })
+
+  it('records every file of a multi-file job in the history', async () => {
+    vi.spyOn(api, 'createJob').mockResolvedValue(job({ id: 'multi' }))
+    await startJob(info, 'audio-mp3')
+
+    FakeEventSource.latest().emit(job({ id: 'multi', status: 'done', files: ['1.jpg', '2.jpg', '3.jpg'] }))
+
+    await vi.waitFor(() => expect(historyStore.get()).toHaveLength(1))
+    expect(historyStore.get()[0]).toMatchObject({ fileName: '1.jpg', fileNames: ['1.jpg', '2.jpg', '3.jpg'] })
   })
 
   it('marks the job lost when the server no longer knows it after a dropped stream', async () => {

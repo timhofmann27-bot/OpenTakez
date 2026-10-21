@@ -1,12 +1,15 @@
 import { memo, useState } from 'react'
 import { useT } from '../i18n'
-import { ApiError, fileUrl } from '../lib/api'
+import { ApiError } from '../lib/api'
 import { errorMessage } from '../lib/errors'
 import { formatDuration, formatPercent, formatSpeed } from '../lib/format'
 import { type JobView, removeJob, retryJob } from '../lib/jobs'
+import { FileList } from './FileList'
 import { Icon } from './Icon'
 import { PlatformChip } from './PlatformChip'
+import { platformName } from '../lib/platforms'
 import { ProgressMeter } from './ProgressMeter'
+import { SettingsLink } from './SettingsLink'
 import { Thumbnail } from './Thumbnail'
 
 export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
@@ -15,10 +18,18 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const loginRequired = job.status === 'error' && job.error_code === 'login_required'
+  const platform = info.platform || job.platform
+  const errorText = loginRequired
+    ? platform
+      ? t('error.loginRequired', { platform: platformName(platform) })
+      : t('error.loginRequiredGeneric')
+    : (job.error ?? t('error.unknown', { status: '' }))
+
   // Announced to screen readers only when the state changes, not on every progress tick.
   const announcement = (() => {
     if (lost) return t('job.lost')
-    if (job.status === 'error') return job.error ?? t('error.unknown', { status: '' })
+    if (job.status === 'error') return errorText
     if (job.status === 'done') return t('job.done')
     if (job.progress?.phase === 'processing') return t('job.processing')
     return job.status === 'running' ? t('job.downloading') : t('job.queued')
@@ -26,7 +37,7 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
 
   const status = (() => {
     if (lost) return t('job.lost')
-    if (job.status === 'error') return job.error ?? t('error.unknown', { status: '' })
+    if (job.status === 'error') return errorText
     if (job.status === 'done') return t('job.done')
     if (job.status === 'queued' || !job.progress) return t('job.queued')
     if (job.progress.phase === 'processing') return t('job.processing')
@@ -36,6 +47,9 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
       .join(' · ')
   })()
   const failed = lost || job.status === 'error'
+  const showFiles = job.status === 'done' && !lost
+  // Remove sits at the start of a line unless a button precedes it (Retry, or a single Save link).
+  const removeStartsLine = !failed && !(showFiles && job.files.length <= 1)
   const active = !failed && job.status !== 'done'
 
   async function guarded(action: () => Promise<void>) {
@@ -78,6 +92,10 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
         <p className="sr-only" role="status">
           {announcement}
         </p>
+        {showFiles && !!job.skipped && job.skipped > 0 && (
+          <p className="text-xs text-muted">{t('job.skipped', { count: job.skipped })}</p>
+        )}
+        {loginRequired && !lost && <SettingsLink />}
         {notice && (
           <p role="alert" className="text-xs text-danger">
             {notice}
@@ -85,22 +103,15 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
         )}
 
         <div className="mt-1 flex flex-wrap gap-2">
-          {job.status === 'done' && !lost && (
-            <a
-              href={fileUrl(job.id)}
-              download={job.files[0]}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-accent-fg"
-            >
-              <Icon name="save" className="size-4" />
-              {t('job.save')}
-            </a>
+          {showFiles && (
+            <FileList jobId={job.id} files={job.files} sizes={job.sizes} />
           )}
           {failed && (
             <button
               type="button"
               onClick={retry}
               disabled={busy}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-surface-2 px-3 text-sm font-medium"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-3 text-sm font-medium"
             >
               <Icon name="retry" className="size-4" />
               {t('job.retry')}
@@ -111,7 +122,7 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
             onClick={remove}
             disabled={busy}
             aria-label={`${t('job.remove')}: ${info.title}`}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-muted hover:bg-surface-2"
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm text-muted hover:bg-surface-2 ${removeStartsLine ? '-ml-3' : ''}`}
           >
             <Icon name="trash" className="size-4" />
             {t('job.remove')}

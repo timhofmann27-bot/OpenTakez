@@ -28,7 +28,7 @@ test('download flow: resolve, pick MP3, finish via SSE, save, history', async ({
   expect(mock.jobBodies).toEqual([{ url: MEDIA.url, option: 'audio-mp3' }])
 
   await expect(page.getByRole('status').filter({ hasText: /^Done$/ })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/api/jobs/job1/file')
+  await expect(page.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/api/jobs/job1/files/0')
 
   await page.getByRole('link', { name: 'History' }).click()
   await expect(page).toHaveURL(/\/history$/)

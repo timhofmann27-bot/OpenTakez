@@ -8,7 +8,8 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "pydantic-settings>=2.6",
-    "yt-dlp[default]",
+    # curl-cffi: browser impersonation, required for TikTok.
+    "yt-dlp[default,curl-cffi]",
 ]
 
 [dependency-groups]

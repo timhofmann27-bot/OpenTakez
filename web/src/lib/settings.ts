@@ -50,3 +50,18 @@ export function normalizeServerUrl(input: string): string | null {
     return null
   }
 }
+
+/**
+ * True when requests would go over plain http to a non-local host. `serverUrl` empty means
+ * the origin serving this app.
+ */
+export function isInsecureServer(serverUrl: string, origin = location.origin): boolean {
+  const normalized = normalizeServerUrl(serverUrl)
+  const target = normalized || origin
+  try {
+    const { protocol, hostname } = new URL(target)
+    return protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(hostname)
+  } catch {
+    return false
+  }
+}

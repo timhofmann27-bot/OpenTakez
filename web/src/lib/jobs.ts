@@ -60,7 +60,8 @@ function historyItem(job: Job, info: MediaInfo): HistoryItem {
     platform: info.platform,
     kind: info.kind,
     option: job.option,
-    fileName: job.files[0] ?? `${info.title}`,
+    fileName: job.files[0] ?? info.title,
+    fileNames: job.files.length ? job.files : [info.title],
     createdAt: Date.now(),
   }
 }

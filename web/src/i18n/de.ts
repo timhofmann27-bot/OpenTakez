@@ -83,8 +83,10 @@ export const de = {
   'job.saveZip': 'Alle als ZIP speichern',
   'job.saveFile': '{name} speichern',
   'job.files': '{count} Dateien',
+  'job.skipped': '{count} Elemente konnten nicht geladen werden',
 
   'error.loginRequired': 'Dafür ist ein Login nötig. Lade in den Einstellungen Cookies für {platform} hoch.',
+  'error.loginRequiredGeneric': 'Dafür ist ein Login nötig. Lade in den Einstellungen Cookies hoch.',
   'error.busy': 'Der Server ist ausgelastet. Versuch es gleich noch einmal.',
 
   'settings.cookies.title': 'Logins (Cookies)',
@@ -99,6 +101,9 @@ export const de = {
   'settings.cookies.delete': 'Löschen',
   'settings.cookies.deleteConfirm': 'Den {platform}-Login vom Server löschen?',
   'settings.cookies.none': 'Kein Login',
+  'settings.cookies.loading': 'Lädt …',
+  'settings.cookies.saved': 'Cookies gespeichert',
+  'settings.cookies.removed': 'Login entfernt',
   'settings.cookies.present': 'Eingeloggt · {count} Cookies',
   'settings.cookies.expires': 'Läuft ab am {date}',
   'settings.cookies.expired': 'Abgelaufen, lade eine neue Datei hoch',

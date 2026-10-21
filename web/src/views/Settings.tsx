@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CookieSettings } from '../components/CookieSettings'
 import { useT } from '../i18n'
 import { api } from '../lib/api'
 import { errorMessage } from '../lib/errors'
@@ -117,6 +118,8 @@ export function Settings() {
           )}
         </div>
       </form>
+
+      <CookieSettings />
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="language" className="text-sm font-medium">

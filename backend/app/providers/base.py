@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal, Protocol
@@ -67,8 +67,18 @@ class ProviderError(Exception):
         self.code = code
 
 
+class DownloadedFiles(list[Path]):
+    """The files of a download. `skipped` counts items that failed while others succeeded."""
+
+    def __init__(self, files: Iterable[Path] = (), skipped: int = 0):
+        super().__init__(files)
+        self.skipped = skipped
+
+
 class Provider(Protocol):
     platform: str
+    # What `download` accepts; POST /api/jobs refuses any other option for this provider.
+    options: list[DownloadOption]
 
     def supports(self, url: str) -> bool: ...
 

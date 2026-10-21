@@ -52,6 +52,8 @@ export type Job = {
   error?: string | null
   /** Known failure, e.g. 'login_required' → cookies needed. */
   error_code?: string | null
+  /** Items that failed while others succeeded. */
+  skipped?: number
   created_at: string
 }
 

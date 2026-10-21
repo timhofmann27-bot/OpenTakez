@@ -86,13 +86,14 @@ def test_queue_limit_returns_503(client, fake_provider, monkeypatch):
 
 
 @pytest.mark.parametrize("kind", ["playlist", "multi_video"])
-def test_playlists_are_rejected_at_resolve(kind):
+def test_nested_playlists_are_rejected_at_resolve(kind):
     from app.providers.base import ProviderError
     from tests.test_ytdlp_provider import FakeYoutubeDL, make_provider
 
-    ydl = FakeYoutubeDL(info={"_type": kind, "id": "PL1", "title": "Mix", "entries": []})
+    entries = [{"_type": kind, "id": "PL2", "ie_key": "Youtube"}]
+    ydl = FakeYoutubeDL(info={"_type": kind, "id": "PL1", "title": "Mix", "entries": entries})
 
-    with pytest.raises(ProviderError, match="Playlists"):
+    with pytest.raises(ProviderError, match="Channels and profiles"):
         make_provider(ydl).resolve("https://youtube.com/playlist?list=PL1")
     assert ydl.options["extract_flat"] == "in_playlist"
 
@@ -108,5 +109,5 @@ def test_download_is_capped(tmp_path):
     provider.download("https://youtube.com/x", DownloadOption.VIDEO_BEST, tmp_path, lambda p: None)
 
     assert ydl.options["max_filesize"] == 1000
-    assert ydl.options["playlist_items"] == "1"
+    assert ydl.options["playlist_items"] == "1:50"
     assert ydl.options["socket_timeout"] == 20

@@ -57,6 +57,7 @@ def test_job_downloads_and_serves_the_file(client):
     response = client.get(f"/api/jobs/{job['id']}/file")
 
     assert done["files"] == ["Clip [abc].mp4"]
+    assert done["sizes"] == [11]
     assert response.content == b"video-bytes"
     assert response.headers["content-disposition"] == (
         "attachment; filename=\"Clip [abc].mp4\"; filename*=UTF-8''Clip%20%5Babc%5D.mp4"
@@ -83,6 +84,70 @@ def test_failed_job_reports_error(client, fake_provider):
 
     assert job["error"] == "Private video"
     assert client.get(f"/api/jobs/{job['id']}/file").status_code == 409
+
+
+def test_422_detail_carries_the_error_code(client, fake_provider):
+    fake_provider.error, fake_provider.error_code = "Login needed", "login_required"
+
+    response = client.post("/api/resolve", json={"url": URL})
+    job = wait_for_job(client, start_job(client)["id"], "error")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {"message": "Login needed", "code": "login_required"}
+    assert job["error_code"] == "login_required"
+
+
+def test_files_are_served_by_index(client, fake_provider):
+    fake_provider.files = {"01 a.jpg": b"aaa", "02 b.mp4": b"bbbb"}
+    job = wait_for_job(client, start_job(client)["id"], "done")
+
+    second = client.get(f"/api/jobs/{job['id']}/files/1")
+    alias = client.get(f"/api/jobs/{job['id']}/file")
+
+    assert job["sizes"] == [3, 4]
+    assert second.content == b"bbbb"
+    assert 'filename="02 b.mp4"' in second.headers["content-disposition"]
+    assert alias.content == b"aaa"
+
+
+@pytest.mark.parametrize("index", [2, -1])
+def test_file_index_out_of_range_is_404(client, index):
+    job = wait_for_job(client, start_job(client)["id"], "done")
+
+    assert client.get(f"/api/jobs/{job['id']}/files/{index}").status_code == 404
+
+
+def test_files_and_zip_of_unfinished_job_are_409(client, fake_provider):
+    fake_provider.gate = threading.Event()
+    job = start_job(client)
+
+    assert client.get(f"/api/jobs/{job['id']}/files/0").status_code == 409
+    assert client.get(f"/api/jobs/{job['id']}/zip").status_code == 409
+    fake_provider.gate.set()
+    wait_for_job(client, job["id"], "done")
+
+
+def test_symlinked_result_file_is_not_served(client, tmp_path):
+    job = wait_for_job(client, start_job(client)["id"], "done")
+    secret = tmp_path / "secret.txt"
+    secret.write_text("secret")
+    path = app.state.jobs.file_path(app.state.jobs.get(job["id"]), 0)
+    path.unlink()
+    path.symlink_to(secret)
+
+    assert client.get(f"/api/jobs/{job['id']}/files/0").status_code == 404
+    assert client.get(f"/api/jobs/{job['id']}/zip").status_code == 404
+
+
+def test_job_over_the_size_cap_fails_and_deletes_its_files(client, fake_provider, monkeypatch):
+    monkeypatch.setattr(settings, "max_job_mb", 1)
+    fake_provider.files = {"a.bin": b"x" * 700_000, "b.bin": b"x" * 700_000}
+
+    job = wait_for_job(client, start_job(client)["id"], "error")
+
+    assert "limit" in job["error"]
+    assert job["files"] == []
+    assert not app.state.jobs._job_dir(job["id"]).exists()
 
 
 def test_events_stream_until_job_finishes(client):
@@ -115,7 +180,7 @@ def test_running_job_cannot_be_deleted_but_finished_one_can(client, fake_provide
 def test_cleanup_removes_expired_jobs_and_files(client):
     job = wait_for_job(client, start_job(client)["id"], "done")
     jobs = app.state.jobs
-    job_dir = jobs.file_path(jobs.get(job["id"]), "x").parent
+    job_dir = jobs.file_path(jobs.get(job["id"]), 0).parent
 
     assert jobs.cleanup(timedelta(hours=1)) == 0
     assert jobs.cleanup(timedelta(seconds=-1)) == 1
@@ -153,3 +218,20 @@ class TestToken:
 
         assert response.status_code == 200
         assert response.json()["auth_required"] is True
+
+
+def test_option_the_provider_cannot_download_is_422(client):
+    response = client.post("/api/jobs", json={"url": URL, "option": "image-original"})
+
+    assert response.status_code == 422
+    assert "option" in str(response.json()["detail"]).lower()
+
+
+def test_option_the_provider_offers_is_accepted(client):
+    assert client.post("/api/jobs", json={"url": URL, "option": "audio-mp3"}).status_code == 201
+
+
+def test_done_job_reports_skipped_items(client, fake_provider):
+    job = wait_for_job(client, start_job(client)["id"], "done")
+
+    assert job["skipped"] == 0

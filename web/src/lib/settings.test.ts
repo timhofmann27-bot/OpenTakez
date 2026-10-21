@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeServerUrl, settingsStore, updateSettings } from './settings'
+import { isInsecureServer, normalizeServerUrl, settingsStore, updateSettings } from './settings'
 
 describe('normalizeServerUrl', () => {
   it.each([
@@ -22,5 +22,20 @@ describe('settings store', () => {
 
     expect(settingsStore.get().token).toBe('abc')
     expect(JSON.parse(localStorage.getItem('opentakez.settings')!).token).toBe('abc')
+  })
+})
+
+describe('isInsecureServer', () => {
+  it('flags plain http to remote hosts only', () => {
+    expect(isInsecureServer('http://192.168.1.5:8000')).toBe(true)
+    expect(isInsecureServer('http://localhost:8000')).toBe(false)
+    expect(isInsecureServer('http://127.0.0.1:8000')).toBe(false)
+    expect(isInsecureServer('https://dl.example.com')).toBe(false)
+  })
+
+  it('uses the page origin when no server is set', () => {
+    expect(isInsecureServer('', 'http://nas.local')).toBe(true)
+    expect(isInsecureServer('', 'https://nas.local')).toBe(false)
+    expect(isInsecureServer('', 'http://localhost:5173')).toBe(false)
   })
 })

@@ -12,7 +12,9 @@ export type HistoryItem = {
   platform: string
   kind: MediaInfo['kind']
   option: DownloadOption
+  /** First file; kept for records saved before multi-file jobs. */
   fileName: string
+  fileNames: string[]
   createdAt: number
   /** The server deleted the file (TTL expired or server restarted). */
   gone?: boolean
@@ -25,8 +27,17 @@ export const useHistory = () => useStore(historyStore)
 
 const newestFirst = (a: HistoryItem, b: HistoryItem) => b.createdAt - a.createdAt
 
+/** Records from before multi-file jobs only have `fileName`. */
+export function normalizeHistoryItem(item: HistoryItem): HistoryItem {
+  const named = Array.isArray(item.fileNames)
+    ? item.fileNames.filter((name): name is string => typeof name === 'string' && name !== '')
+    : []
+  const fileNames = named.length ? named : [typeof item.fileName === 'string' && item.fileName ? item.fileName : item.title]
+  return { ...item, fileNames }
+}
+
 export async function loadHistory() {
-  const items = await values<HistoryItem>(db)
+  const items = (await values<HistoryItem>(db)).map(normalizeHistoryItem)
   // Merge: entries added while IndexedDB was being read must survive.
   historyStore.set((prev) =>
     [...prev, ...items.filter((i) => !prev.some((p) => p.id === i.id))].sort(newestFirst),

@@ -12,6 +12,7 @@ export function OptionPicker({ options, value, onChange }: Props) {
   const groups = [
     { label: t('option.group.video'), items: options.filter((o) => o.startsWith('video')) },
     { label: t('option.group.audio'), items: options.filter((o) => o.startsWith('audio')) },
+    { label: t('option.group.image'), items: options.filter((o) => o.startsWith('image')) },
   ].filter((g) => g.items.length)
 
   return (

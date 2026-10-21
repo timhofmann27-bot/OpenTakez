@@ -32,6 +32,32 @@ Only single videos and tracks for now; playlists and channels are refused. Files
 `OPENTAKEZ_MAX_FILE_MB` are skipped, and at most `OPENTAKEZ_MAX_QUEUED_JOBS` downloads may be
 pending at once.
 
+### Logins (cookies)
+
+Instagram posts, and some TikTok and Facebook content, can only be loaded while logged in. You
+can give the server a login session as a `cookies.txt` file (Settings → Logins in the app):
+
+1. Log in to the site in a desktop browser.
+2. Export the cookies in Netscape `cookies.txt` format with a browser extension such as
+   "Get cookies.txt LOCALLY".
+3. Upload the file for that platform in Settings.
+
+Only cookies that belong to that platform's domains are kept; everything else in the file is
+discarded. The result is stored as `/data/cookies/<platform>.txt` with mode 0600 (directory
+0700) in the data volume and is never sent to the app or written to logs. For each download the
+server hands a temporary copy to the downloader and deletes it afterwards. Delete the cookies in
+Settings (or remove the file) at any time.
+
+**Use a secondary account.** Platforms can restrict or ban accounts that automated tools use,
+and anyone with access to the data volume or a backup of it can use the session. Never upload
+the cookies of your main account. Cookies expire; upload a fresh file when downloads ask for a
+login again.
+
+**Image downloads run as the same user as the app.** gallery-dl is a separate program, but it
+runs as the app's user, so in principle it could read the stored cookies. This is an accepted
+risk: it is pinned to an exact version with hashes (`tools/gallery-dl.txt`), installed in its own
+root-owned environment, and started with a clean environment and a config generated per run.
+
 ### Updating yt-dlp
 
 Platforms change often. Rebuild or pull a newer image to get a newer yt-dlp. As a stopgap,
@@ -78,6 +104,9 @@ All endpoints except `/api/health` need the token (unless `OPENTAKEZ_ALLOW_NO_TO
 | GET | `/api/health` | Version, supported platforms, whether a token is required |
 | POST | `/api/resolve` | `{"url"}` → title, thumbnail, duration, download options |
 | POST | `/api/jobs` | `{"url", "option"}` → start a download job |
+| GET | `/api/cookies` | Which platforms have cookies uploaded (never their content) |
+| PUT | `/api/cookies/{platform}` | Upload a `cookies.txt` as the raw `text/plain` body |
+| DELETE | `/api/cookies/{platform}` | Remove the cookies of a platform |
 | GET | `/api/jobs/{id}` | Job status and progress |
 | GET | `/api/jobs/{id}/events` | Server-sent events with the job state until it finishes |
 | GET | `/api/jobs/{id}/file` | The downloaded file |

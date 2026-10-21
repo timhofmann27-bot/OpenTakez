@@ -22,3 +22,15 @@ export function formatSpeed(bytesPerSecond?: number | null): string {
 export function formatPercent(fraction?: number | null): string {
   return fraction == null ? '' : `${Math.floor(fraction * 100)} %`
 }
+
+export function formatBytes(bytes?: number | null): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return ''
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit++
+  }
+  return `${value.toFixed(value < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`
+}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, api, eventsUrl, fileUrl, setUnauthorizedHandler } from './api'
+import { ApiError, api, eventsUrl, fileUrl, setUnauthorizedHandler, zipUrl } from './api'
 import { updateSettings } from './settings'
 
 const fetchMock = vi.fn()
@@ -105,10 +105,64 @@ describe('api', () => {
     updateSettings({ token: 'a b&c' })
 
     expect(eventsUrl('j1')).toBe('/api/jobs/j1/events?token=a%20b%26c')
-    expect(fileUrl('j1')).toBe('/api/jobs/j1/file?token=a%20b%26c')
+    expect(fileUrl('j1')).toBe('/api/jobs/j1/files/0?token=a%20b%26c')
+    expect(fileUrl('j1', 2)).toBe('/api/jobs/j1/files/2?token=a%20b%26c')
+    expect(zipUrl('j1')).toBe('/api/jobs/j1/zip?token=a%20b%26c')
   })
 
   it('omits the token query when no token is set', () => {
-    expect(fileUrl('j1')).toBe('/api/jobs/j1/file')
+    expect(fileUrl('j1')).toBe('/api/jobs/j1/files/0')
+    expect(zipUrl('j1')).toBe('/api/jobs/j1/zip')
+  })
+
+  it('reads a {message, code} detail from a 422', async () => {
+    respond(422, { detail: { message: 'Login required', code: 'login_required' } })
+
+    const error = await api.resolve('x').catch((e) => e)
+
+    expect(error).toMatchObject({ kind: 'platform', status: 422, message: 'Login required', code: 'login_required' })
+  })
+
+  it('tolerates odd detail shapes', async () => {
+    respond(422, { detail: [{ msg: 'bad' }] })
+    expect(await api.resolve('x').catch((e) => e)).toMatchObject({ message: '', code: undefined })
+    respond(422, { detail: { message: 5, code: 7 } })
+    expect(await api.resolve('x').catch((e) => e)).toMatchObject({ message: '', code: undefined })
+  })
+
+  it('maps 503 to busy', async () => {
+    respond(503, { detail: 'Server busy' })
+
+    await expect(api.createJob('u', 'video-best')).rejects.toMatchObject({ kind: 'busy', status: 503 })
+  })
+
+  it('keeps a caller-supplied Content-Type', async () => {
+    respond(200, { platform: 'instagram', present: true, cookie_count: 1, expired: false, domains: [], dropped_count: 0 })
+
+    await api.cookies.put('instagram', '# Netscape\n')
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/cookies/instagram')
+    expect(init.method).toBe('PUT')
+    expect(init.headers.get('Content-Type')).toBe('text/plain')
+    expect(init.body).toBe('# Netscape\n')
+  })
+
+  it('lists and removes cookies', async () => {
+    respond(200, [{ platform: 'tiktok', present: false, cookie_count: 0, expired: false, domains: [] }])
+    await expect(api.cookies.list()).resolves.toHaveLength(1)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/cookies')
+
+    respond(204)
+    await expect(api.cookies.remove('tiktok')).resolves.toBeUndefined()
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/cookies/tiktok')
+    expect(fetchMock.mock.calls[1][1].method).toBe('DELETE')
+  })
+
+  it('surfaces 413 and 422 on cookie upload', async () => {
+    respond(413, { detail: 'Too large' })
+    await expect(api.cookies.put('tiktok', 'x')).rejects.toMatchObject({ status: 413 })
+    respond(422, { detail: 'Not a cookies.txt' })
+    await expect(api.cookies.put('tiktok', 'x')).rejects.toMatchObject({ kind: 'platform', message: 'Not a cookies.txt' })
   })
 })

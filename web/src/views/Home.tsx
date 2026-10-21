@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { PreviewCard } from '../components/PreviewCard'
+import { SettingsLink } from '../components/SettingsLink'
 import { useT } from '../i18n'
 import { ApiError, api } from '../lib/api'
-import { errorMessage } from '../lib/errors'
+import { errorMessage, guessPlatform, isLoginRequired } from '../lib/errors'
 import { startJob } from '../lib/jobs'
 import { pendingLink } from '../lib/pending'
 import { useSettings } from '../lib/settings'
@@ -15,12 +16,12 @@ type State =
   | { status: 'idle' }
   | { status: 'resolving' }
   | { status: 'ready'; info: MediaInfo }
-  | { status: 'error'; error: unknown }
+  | { status: 'error'; error: unknown; platform: string }
 
 type Action =
   | { type: 'resolve' }
   | { type: 'resolved'; info: MediaInfo }
-  | { type: 'failed'; error: unknown }
+  | { type: 'failed'; error: unknown; platform: string }
   | { type: 'reset' }
 
 function reducer(_: State, action: Action): State {
@@ -30,7 +31,7 @@ function reducer(_: State, action: Action): State {
     case 'resolved':
       return { status: 'ready', info: action.info }
     case 'failed':
-      return { status: 'error', error: action.error }
+      return { status: 'error', error: action.error, platform: action.platform }
     case 'reset':
       return { status: 'idle' }
   }
@@ -42,7 +43,7 @@ export function Home() {
   const pending = useStore(pendingLink)
   const [text, setText] = useState('')
   const [state, dispatch] = useReducer(reducer, { status: 'idle' })
-  const [startError, setStartError] = useState('')
+  const [startError, setStartError] = useState<unknown>(null)
   const [pasteDenied, setPasteDenied] = useState(false)
   const inflight = useRef<AbortController | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -52,12 +53,12 @@ export function Home() {
     inflight.current?.abort()
     const controller = new AbortController()
     inflight.current = controller
-    setStartError('')
+    setStartError(null)
     dispatch({ type: 'resolve' })
     try {
       dispatch({ type: 'resolved', info: await api.resolve(value, controller.signal) })
     } catch (error) {
-      if (!controller.signal.aborted) dispatch({ type: 'failed', error })
+      if (!controller.signal.aborted) dispatch({ type: 'failed', error, platform: guessPlatform(value) })
     }
   }, [])
 
@@ -102,12 +103,12 @@ export function Home() {
   }
 
   async function download(info: MediaInfo, option: DownloadOption) {
-    setStartError('')
+    setStartError(null)
     try {
       await startJob(info, option)
       navigate('/downloads')
     } catch (error) {
-      setStartError(errorMessage(error, t))
+      setStartError(error)
     }
   }
 
@@ -133,7 +134,10 @@ export function Home() {
             className="flex gap-2 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
           >
             <Icon name="alert" className="size-5 shrink-0" />
-            <span>{errorMessage(state.error, t)}</span>
+            <div className="flex flex-col gap-1">
+              <span>{errorMessage(state.error, t, state.platform)}</span>
+              {isLoginRequired(state.error) && <SettingsLink />}
+            </div>
           </div>
         )}
 
@@ -144,10 +148,11 @@ export function Home() {
               info={state.info}
               onDownload={(option) => download(state.info, option)}
             />
-            {startError && (
-              <p role="alert" className="text-sm text-danger">
-                {startError}
-              </p>
+            {startError != null && (
+              <div role="alert" className="flex flex-col gap-1 text-sm text-danger">
+                <p>{errorMessage(startError, t, state.info.platform)}</p>
+                {isLoginRequired(startError) && <SettingsLink />}
+              </div>
             )}
           </div>
         )}

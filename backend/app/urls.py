@@ -28,3 +28,14 @@ def host_matches(url: str, domains: Iterable[str]) -> bool:
         return False
     host = parts.hostname.lower().rstrip(".")
     return any(host == domain or host.endswith("." + domain) for domain in domains)
+
+
+def trusted_thumbnail(url: str | None, domains: Iterable[str] | None) -> str | None:
+    """`url` if it is https on one of the platform's CDN `domains` (None allows any host).
+
+    The browser loads thumbnails directly, so a hostile page title or API field must not be able
+    to point it at arbitrary hosts.
+    """
+    if not url or not url.startswith("https://"):
+        return None
+    return url if domains is None or host_matches(url, domains) else None

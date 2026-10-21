@@ -1,6 +1,8 @@
 import asyncio
 import contextlib
 import logging
+import os
+import subprocess
 from collections.abc import AsyncIterator
 from datetime import timedelta
 from importlib.metadata import version
@@ -10,8 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app import __version__
+from app.api.cookies import router as cookies_router
 from app.api.routes import router
 from app.config import settings
+from app.cookies import COOKIE_PLATFORMS, CookieStore
 from app.jobs.manager import JobManager
 from app.providers import default_providers
 from app.security import RedactTokenFilter, ensure_token, security_headers
@@ -25,11 +29,37 @@ async def _cleanup_loop(jobs: JobManager) -> None:
         jobs.cleanup(timedelta(hours=settings.file_ttl_hours))
 
 
+_gallery_dl_versions: dict[str, str] = {}
+
+
+def _gallery_dl_version() -> str | None:
+    """Cached on success only, so a binary that appears later (or a flaky start) is retried."""
+    binary = settings.gallery_dl_bin
+    if binary in _gallery_dl_versions:
+        return _gallery_dl_versions[binary]
+    try:
+        out = subprocess.run(  # noqa: S603
+            [binary, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=True,
+            env={"PATH": os.environ.get("PATH", "")},
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if not out:
+        return None
+    _gallery_dl_versions[binary] = out.splitlines()[0]
+    return _gallery_dl_versions[binary]
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logging.getLogger("uvicorn.access").addFilter(RedactTokenFilter())
     ensure_token(settings)
-    app.state.providers = default_providers()
+    app.state.cookies = CookieStore(settings.data_dir, settings.cookie_max_kb * 1024)
+    app.state.providers = default_providers(app.state.cookies)
     app.state.jobs = JobManager(
         settings.data_dir, settings.max_concurrent_jobs, settings.max_queued_jobs
     )
@@ -58,11 +88,14 @@ def health() -> dict[str, object]:
         "version": app.version,
         "yt_dlp": version("yt-dlp"),
         "auth_required": bool(settings.token),
+        "gallery_dl": _gallery_dl_version(),
         "platforms": app.state.providers.platforms,
+        "cookie_platforms": list(COOKIE_PLATFORMS),
     }
 
 
 app.include_router(router)
+app.include_router(cookies_router)
 
 
 # Serve the built PWA when it's bundled (Docker image). Unknown paths fall back to

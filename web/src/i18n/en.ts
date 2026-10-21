@@ -79,8 +79,10 @@ export const en = {
   'job.saveZip': 'Save all as ZIP',
   'job.saveFile': 'Save {name}',
   'job.files': '{count} files',
+  'job.skipped': "{count} items couldn't be downloaded",
 
   'error.loginRequired': 'This needs a login. Upload cookies for {platform} in Settings.',
+  'error.loginRequiredGeneric': 'This needs a login. Upload cookies in Settings.',
   'error.busy': 'The server is busy. Try again in a moment.',
 
   'settings.cookies.title': 'Logins (cookies)',
@@ -95,6 +97,9 @@ export const en = {
   'settings.cookies.delete': 'Delete',
   'settings.cookies.deleteConfirm': 'Delete the {platform} login from the server?',
   'settings.cookies.none': 'No login',
+  'settings.cookies.loading': 'Loading …',
+  'settings.cookies.saved': 'Cookies saved',
+  'settings.cookies.removed': 'Login removed',
   'settings.cookies.present': 'Logged in · {count} cookies',
   'settings.cookies.expires': 'Expires {date}',
   'settings.cookies.expired': 'Expired, upload a new file',

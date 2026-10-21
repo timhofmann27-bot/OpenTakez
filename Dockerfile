@@ -16,11 +16,22 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# gallery-dl (GPL-2.0-only) lives in its own root-owned venv, pinned with hashes: it stays a
+# separate program (never imported), and neither the app user nor the yt-dlp updater can touch it.
+COPY tools/gallery-dl.txt /tmp/gallery-dl.txt
+RUN uv venv --python /usr/local/bin/python /opt/gallery-dl \
+    && uv pip install --python /opt/gallery-dl/bin/python --require-hashes --no-deps \
+        -r /tmp/gallery-dl.txt \
+    && ln -s /opt/gallery-dl/bin/gallery-dl /usr/local/bin/gallery-dl \
+    && rm /tmp/gallery-dl.txt
+
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/app/.venv \
     PATH=/app/.venv/bin:$PATH \
     OPENTAKEZ_WEB_DIR=/app/web/dist \
+    # Absolute: the app-writable /app/.venv/bin is first on PATH and must not shadow gallery-dl.
+    OPENTAKEZ_GALLERY_DL_BIN=/opt/gallery-dl/bin/gallery-dl \
     OPENTAKEZ_DATA_DIR=/data
 
 WORKDIR /app/backend

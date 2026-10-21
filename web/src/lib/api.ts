@@ -1,5 +1,5 @@
 import { settingsStore } from './settings'
-import type { DownloadOption, Health, Job, MediaInfo } from './types'
+import type { CookieStatus, CookieUpload, DownloadOption, Health, Job, MediaInfo } from './types'
 
 export type ApiErrorKind =
   | 'badRequest'
@@ -8,15 +8,19 @@ export type ApiErrorKind =
   | 'conflict'
   | 'notFound'
   | 'network'
+  | 'busy'
   | 'server'
 
 export class ApiError extends Error {
   readonly status: number
   readonly kind: ApiErrorKind
+  /** Machine-readable reason for known failures, e.g. 'login_required'. */
+  readonly code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.status = status
+    this.code = code
     this.kind = kindFor(status)
   }
 }
@@ -35,9 +39,24 @@ function kindFor(status: number): ApiErrorKind {
       return 'conflict'
     case 422:
       return 'platform'
+    case 503:
+      return 'busy'
     default:
       return 'server'
   }
+}
+
+/** FastAPI `detail` is a string, or `{message, code}` for known failures. */
+function parseDetail(detail: unknown): { message: string; code?: string } {
+  if (typeof detail === 'string') return { message: detail }
+  if (detail && typeof detail === 'object') {
+    const { message, code } = detail as { message?: unknown; code?: unknown }
+    return {
+      message: typeof message === 'string' ? message : '',
+      code: typeof code === 'string' ? code : undefined,
+    }
+  }
+  return { message: '' }
 }
 
 /** Called on every 401 so the app can ask for a token. */
@@ -54,7 +73,7 @@ async function request<T>(path: string, init: RequestInit = {}, target: Target =
   const token = target.token ?? settingsStore.get().token
   const headers = new Headers(init.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  if (init.body) headers.set('Content-Type', 'application/json')
+  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
 
   let response: Response
   try {
@@ -67,11 +86,11 @@ async function request<T>(path: string, init: RequestInit = {}, target: Target =
     // Ignore 401s for a token that has since been replaced, or for an explicit candidate.
     if (response.status === 401 && !target.token && token === settingsStore.get().token)
       onUnauthorized()
-    const detail = await response
+    const { message, code } = await response
       .json()
-      .then((body) => (typeof body?.detail === 'string' ? body.detail : ''))
-      .catch(() => '')
-    throw new ApiError(response.status, detail)
+      .then((body) => parseDetail(body?.detail))
+      .catch(() => parseDetail(undefined))
+    throw new ApiError(response.status, message, code)
   }
   return response.status === 204 ? (undefined as T) : response.json()
 }
@@ -96,6 +115,18 @@ export const api = {
     }),
   deleteJob: (id: string) =>
     request<void>(`/api/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  cookies: {
+    list: () => request<CookieStatus[]>('/api/cookies'),
+    /** Sends the raw cookies.txt; the caller must not keep the text around. */
+    put: (platform: string, text: string) =>
+      request<CookieUpload>(`/api/cookies/${encodeURIComponent(platform)}`, {
+        method: 'PUT',
+        body: text,
+        headers: { 'Content-Type': 'text/plain' },
+      }),
+    remove: (platform: string) =>
+      request<void>(`/api/cookies/${encodeURIComponent(platform)}`, { method: 'DELETE' }),
+  },
 }
 
 /** For EventSource and plain links, which can't send an Authorization header. */
@@ -105,4 +136,6 @@ function withToken(path: string): string {
 }
 
 export const eventsUrl = (id: string) => withToken(`/api/jobs/${encodeURIComponent(id)}/events`)
-export const fileUrl = (id: string) => withToken(`/api/jobs/${encodeURIComponent(id)}/file`)
+export const fileUrl = (id: string, index = 0) =>
+  withToken(`/api/jobs/${encodeURIComponent(id)}/files/${index}`)
+export const zipUrl = (id: string) => withToken(`/api/jobs/${encodeURIComponent(id)}/zip`)

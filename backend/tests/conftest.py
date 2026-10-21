@@ -24,9 +24,13 @@ class FakeProvider:
     """Provider for example.com that writes a small file instead of downloading."""
 
     platform = "fake"
+    options = VIDEO_OPTIONS
 
     def __init__(self) -> None:
         self.error: str | None = None
+        self.error_code: str | None = None
+        # Name -> content of the files a download writes. Defaults to a single clip.
+        self.files: dict[str, bytes] = {"Clip [abc].mp4": b"video-bytes"}
         # Set to hold downloads in the "running" state until the test releases them.
         self.gate: threading.Event | None = None
 
@@ -35,7 +39,7 @@ class FakeProvider:
 
     def resolve(self, url: str) -> MediaInfo:
         if self.error:
-            raise ProviderError(self.error)
+            raise ProviderError(self.error, code=self.error_code)
         return MediaInfo(
             url=url, platform="fake", kind=MediaKind.VIDEO, title="Clip", options=VIDEO_OPTIONS
         )
@@ -47,10 +51,12 @@ class FakeProvider:
         if self.gate:
             self.gate.wait(timeout=5)
         if self.error:
-            raise ProviderError(self.error)
-        file = out_dir / "Clip [abc].mp4"
-        file.write_bytes(b"video-bytes")
-        return [file]
+            raise ProviderError(self.error, code=self.error_code)
+        paths = []
+        for name, content in self.files.items():
+            (out_dir / name).write_bytes(content)
+            paths.append(out_dir / name)
+        return paths
 
 
 @pytest.fixture
@@ -63,8 +69,9 @@ def client(tmp_path, monkeypatch, fake_provider):
     monkeypatch.setattr(settings, "data_dir", tmp_path / "data")
     monkeypatch.setattr(settings, "token", "")
     monkeypatch.setattr(settings, "allow_no_token", True)
+    # Never build the real registry (and its gallery-dl dependency) for API tests.
+    monkeypatch.setattr("app.main.default_providers", lambda *a, **k: Providers([fake_provider]))
     with TestClient(app) as c:
-        app.state.providers = Providers([fake_provider])
         yield c
 
 

@@ -12,10 +12,11 @@ from pydantic import BaseModel, Field
 
 from app.api.auth import require_token
 from app.config import settings
-from app.jobs.manager import FINISHED, Job, JobManager, QueueFullError
+from app.jobs.manager import FINISHED, Job, JobManager, JobStatus, QueueFullError
 from app.providers import Providers, UnsupportedUrlError
 from app.providers.base import DownloadOption, MediaInfo, Provider, ProviderError
 from app.urls import extract_url
+from app.zipstream import stream_zip
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_token)])
 
@@ -79,7 +80,8 @@ def resolve(body: ResolveRequest, providers: ProvidersDep) -> MediaInfo:
     try:
         return provider.resolve(url)
     except ProviderError as e:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+        detail = {"message": str(e), "code": e.code} if e.code else str(e)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail) from e
     finally:
         _resolve_slots.release()
 
@@ -87,6 +89,11 @@ def resolve(body: ResolveRequest, providers: ProvidersDep) -> MediaInfo:
 @router.post("/jobs", status_code=status.HTTP_201_CREATED)
 def create_job(body: JobRequest, providers: ProvidersDep, jobs: JobsDep) -> Job:
     provider, url = _provider_for(providers, body.url)
+    if body.option not in provider.options:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "This download option isn't available for this link",
+        )
     try:
         return jobs.submit(provider, url, body.option)
     except QueueFullError:
@@ -126,14 +133,43 @@ async def job_events(job_id: str, request: Request, jobs: JobsDep) -> StreamingR
     )
 
 
+def _finished_job(jobs: JobManager, job_id: str) -> Job:
+    job = _job_or_404(jobs, job_id)
+    if job.status is not JobStatus.DONE or not job.files:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Download isn't finished")
+    return job
+
+
+def _file_response(jobs: JobManager, job_id: str, index: int) -> FileResponse:
+    job = _finished_job(jobs, job_id)
+    path = jobs.file_path(job, index)
+    if path is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
+    return FileResponse(
+        path, headers={"Content-Disposition": _content_disposition(job.files[index])}
+    )
+
+
+@router.get("/jobs/{job_id}/files/{index}")
+def job_file_at(job_id: str, index: int, jobs: JobsDep) -> FileResponse:
+    return _file_response(jobs, job_id, index)
+
+
 @router.get("/jobs/{job_id}/file")
 def job_file(job_id: str, jobs: JobsDep) -> FileResponse:
-    job = _job_or_404(jobs, job_id)
-    if not job.files:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Download isn't finished")
-    name = job.files[0]
-    return FileResponse(
-        jobs.file_path(job, name),
+    return _file_response(jobs, job_id, 0)
+
+
+@router.get("/jobs/{job_id}/zip")
+def job_zip(job_id: str, jobs: JobsDep) -> StreamingResponse:
+    job = _finished_job(jobs, job_id)
+    paths = [jobs.file_path(job, i) for i in range(len(job.files))]
+    if any(p is None for p in paths):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
+    name = f"OpenTakez-{job.platform}-{job.id[:8]}.zip"
+    return StreamingResponse(
+        stream_zip([p for p in paths if p is not None]),
+        media_type="application/zip",
         headers={"Content-Disposition": _content_disposition(name)},
     )
 

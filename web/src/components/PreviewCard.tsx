@@ -17,6 +17,9 @@ export function PreviewCard({ info, onDownload }: Props) {
   const [option, setOption] = useState<DownloadOption>(info.options[0])
   const [starting, setStarting] = useState(false)
   const duration = formatDuration(info.duration)
+  const compact = info.kind !== 'video'
+  const truncated =
+    info.item_count != null && info.total_items != null && info.total_items > info.item_count
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -34,21 +37,33 @@ export function PreviewCard({ info, onDownload }: Props) {
       aria-label={info.title}
       className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4"
     >
-      <div className={info.kind === 'audio' ? 'flex gap-4' : 'flex flex-col gap-3'}>
+      <div className={compact ? 'flex gap-4' : 'flex flex-col gap-3'}>
         <Thumbnail
           src={info.thumbnail}
           kind={info.kind}
-          className={info.kind === 'audio' ? 'w-24 shrink-0' : 'w-full'}
+          className={compact ? 'w-24 shrink-0 self-start' : 'w-full'}
         />
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <PlatformChip platform={info.platform} />
             {duration && <span className="text-xs text-muted tabular-nums">{duration}</span>}
+            {info.item_count != null && (
+              <span className="text-xs text-muted tabular-nums">
+                {t('media.items', { count: info.item_count })}
+              </span>
+            )}
           </div>
           <h2 className="line-clamp-2 text-base font-semibold leading-snug">{info.title}</h2>
           {info.uploader && <p className="truncate text-sm text-muted">{info.uploader}</p>}
         </div>
       </div>
+
+      {truncated && (
+        <p className="flex gap-2 text-sm text-muted">
+          <Icon name="alert" className="size-5 shrink-0" />
+          <span>{t('media.truncated', { count: info.item_count!, total: info.total_items! })}</span>
+        </p>
+      )}
 
       <OptionPicker options={info.options} value={option} onChange={setOption} />
 
