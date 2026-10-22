@@ -1,3 +1,5 @@
+![OpenTakez](docs/assets/opentakez-banner.png)
+
 # OpenTakez
 
 All-in-one, self-hosted media downloader. Paste or share a link and get the video, photo, or
