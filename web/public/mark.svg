@@ -1,0 +1,10 @@
+<!-- The OpenTakez mark without the icon background, cropped to the glyph: for placing on a
+     surface (app header). logo.svg is the same glyph on the dark icon square. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="104 104 304 304" role="img" aria-label="OpenTakez">
+  <g stroke="#a182fd" fill="none" stroke-linecap="round">
+    <path d="M312 142.6A127.8 127.8 0 1 1 200 142.6" stroke-width="41"/>
+    <path d="M256 127.8V250" stroke-width="41.6"/>
+  </g>
+  <path d="M202.9 242.7H309.1L256 295.8Z" fill="#a182fd" stroke="#a182fd" stroke-width="24.4"
+        stroke-linejoin="round"/>
+</svg>

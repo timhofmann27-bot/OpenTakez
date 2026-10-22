@@ -9,7 +9,16 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      pwaAssets: { image: 'public/logo.svg' },
+      pwaAssets: {
+        image: 'public/logo.svg',
+        // logo.svg already carries the dark icon background, so nothing is padded or
+        // re-coloured; the default preset would put the maskable icon on white with a margin.
+        preset: {
+          transparent: { sizes: [64, 192, 512], padding: 0, favicons: [[64, 'favicon.ico']] },
+          maskable: { sizes: [512], padding: 0 },
+          apple: { sizes: [180], padding: 0 },
+        },
+      },
       manifest: {
         name: 'OpenTakez',
         short_name: 'OpenTakez',

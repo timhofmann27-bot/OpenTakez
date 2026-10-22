@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#6D28D9</color>
+    <!-- The brand icon background; the mark itself is ic_launcher_foreground. -->
+    <color name="ic_launcher_background">#19181A</color>
 </resources>

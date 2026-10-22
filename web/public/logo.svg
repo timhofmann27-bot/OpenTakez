@@ -1,5 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#7c3aed"/>
-  <path d="M256 120v196m0 0-80-80m80 80 80-80" fill="none" stroke="#fff" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M152 380h208" stroke="#fff" stroke-width="44" stroke-linecap="round"/>
+<!-- OpenTakez mark: a download arrow through the gap of a power ring.
+     Source of every PWA icon (see vite.config.ts pwaAssets). Geometry traced from the
+     brand artwork: ring radius 127.8 with a 26 degree gap at the top, 45 degree arrow head. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="OpenTakez">
+  <rect width="512" height="512" fill="#19181a"/>
+  <g stroke="#a182fd" fill="none" stroke-linecap="round">
+    <path d="M312 142.6A127.8 127.8 0 1 1 200 142.6" stroke-width="41"/>
+    <path d="M256 127.8V250" stroke-width="41.6"/>
+  </g>
+  <!-- Filled inset triangle plus a round-joined stroke: the arrow head with 12.2 rounded corners. -->
+  <path d="M202.9 242.7H309.1L256 295.8Z" fill="#a182fd" stroke="#a182fd" stroke-width="24.4"
+        stroke-linejoin="round"/>
 </svg>
