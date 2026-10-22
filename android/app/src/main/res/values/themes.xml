@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.OpenTakez" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat (not plain Material) so AppCompatActivity can apply per-app locales on Android 8-12.
+         The Compose theme paints everything; this only sets the window behind it. -->
+    <style name="Theme.OpenTakez" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>

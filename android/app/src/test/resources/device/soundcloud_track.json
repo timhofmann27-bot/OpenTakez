@@ -1,0 +1,1 @@
+{"id":"1234567","title":"A track","uploader":"An Artist","duration":186.5,"webpage_url":"https://soundcloud.com/an-artist/a-track","thumbnail":"https://i1.sndcdn.com/artworks-000-t500x500.jpg","extractor_key":"Soundcloud","_type":"video","formats":[{"format_id":"http_mp3_0_0","vcodec":"none","acodec":"mp3","abr":128},{"format_id":"hls_opus_0_0","vcodec":"none","acodec":"opus"}]}

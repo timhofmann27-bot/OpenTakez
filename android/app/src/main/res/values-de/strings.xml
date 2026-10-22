@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texts are the PWA's (web/src/i18n/de.ts). Placeholders are positional and match values/strings.xml. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="nav_main">Hauptnavigation</string>
+    <string name="nav_home">Laden</string>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_history">Verlauf</string>
+    <string name="nav_settings">Einstellungen</string>
+
+    <string name="url_label">Link</string>
+    <string name="url_placeholder">Link einfügen oder teilen</string>
+    <string name="url_paste">Einfügen</string>
+    <string name="url_clear">Leeren</string>
+    <string name="url_submit">Link prüfen</string>
+    <string name="home_hint">Füge einen Link von YouTube, TikTok, Instagram, Facebook oder SoundCloud ein oder teile ihn aus einer anderen App an OpenTakez.</string>
+    <string name="home_resolving">Link wird geprüft …</string>
+
+    <string name="preview_format">Format</string>
+    <string name="preview_download">Herunterladen</string>
+    <string name="preview_starting">Startet …</string>
+
+    <string name="option_video_best">Beste</string>
+    <string name="option_video_1080">1080p</string>
+    <string name="option_video_720">720p</string>
+    <string name="option_audio_mp3">MP3</string>
+    <string name="option_audio_m4a">M4A</string>
+    <string name="option_image_original">Original</string>
+    <string name="option_group_video">Video</string>
+    <string name="option_group_audio">Nur Audio</string>
+    <string name="option_group_image">Fotos</string>
+
+    <string name="job_queued">Wartet …</string>
+    <string name="job_downloading">Wird geladen …</string>
+    <string name="job_processing">Wird verarbeitet …</string>
+    <string name="job_done">Fertig</string>
+    <string name="job_preparing">Download wird vorbereitet …</string>
+    <string name="job_retry">Erneut</string>
+    <string name="job_remove">Entfernen</string>
+    <string name="job_cancel">Abbrechen</string>
+    <string name="job_lost">Der Server wurde neu gestartet, dieser Download ist verloren.</string>
+    <string name="job_stillRunning">Läuft noch, entferne ihn, wenn er fertig ist.</string>
+    <string name="job_files">%1$d Dateien</string>
+    <string name="job_skipped">%1$d Elemente konnten nicht geladen werden</string>
+    <string name="downloads_active">%1$d aktiv</string>
+    <string name="downloads_empty">Noch keine Downloads. Starte einen im Tab „Laden“.</string>
+
+    <string name="history_empty">Fertige Downloads erscheinen hier.</string>
+    <string name="history_clear">Verlauf leeren</string>
+    <string name="history_again">Erneut laden</string>
+    <string name="history_open">Öffnen</string>
+    <string name="history_share">Teilen</string>
+    <string name="history_openFailed">Keine App kann diese Datei öffnen.</string>
+
+    <string name="media_items">%1$d Elemente</string>
+    <string name="media_truncated">Nur die ersten %1$d von %2$d Elementen werden geladen.</string>
+
+    <string name="settings_server">Server</string>
+    <string name="settings_serverUrl">Server-URL</string>
+    <string name="settings_serverUrlHint">Leer lassen, um nur auf diesem Gerät zu laden.</string>
+    <string name="settings_serverUrlInvalid">Gib eine vollständige URL ein, z. B. https://dl.example.com</string>
+    <string name="settings_token">Zugangs-Token</string>
+    <string name="settings_tokenHint">OPENTAKEZ_TOKEN aus der .env-Datei des Servers oder der generierte Token aus seinem Log (docker compose logs).</string>
+    <string name="settings_tokenSaved">Ein Token ist gespeichert. Leer lassen, um ihn zu behalten.</string>
+    <string name="settings_tokenRemove">Token entfernen</string>
+    <string name="settings_tokenRemoved">Token entfernt</string>
+    <string name="settings_save">Speichern</string>
+    <string name="settings_saved">Gespeichert</string>
+    <string name="settings_test">Verbindung testen</string>
+    <string name="settings_testing">Wird getestet …</string>
+    <string name="settings_connected">Verbunden: OpenTakez %1$s, yt-dlp %2$s</string>
+    <string name="settings_connectedShort">Verbunden: OpenTakez %1$s</string>
+    <string name="settings_platforms">Plattformen: %1$s</string>
+    <string name="settings_serverTooOld">Dieser Server ist zu alt. OpenTakez braucht Server-Version 1.0.0 oder neuer.</string>
+    <string name="settings_notOpenTakez">Unter dieser Adresse läuft kein OpenTakez-Server.</string>
+    <string name="settings_defaultEngine">Standardort für Downloads</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_languageSystem">Systemstandard</string>
+    <string name="settings_about">Über</string>
+
+    <string name="about_version">Version %1$s</string>
+    <string name="about_text">OpenTakez ist freie Software unter der GNU General Public License, Version 3. Lade nur herunter, was du speichern darfst.</string>
+    <string name="about_licenses_title">Open-Source-Lizenzen</string>
+    <string name="about_licenses_body">yt-dlp (Unlicense), FFmpeg (LGPL), Python (PSF-Lizenz), youtubedl-android, Jetpack Compose, Material 3, Coil, OkHttp, Room und WorkManager (Apache License 2.0).</string>
+
+    <string name="token_title">Zugangs-Token nötig</string>
+    <string name="token_body">Dieser Server ist geschützt. Gib OPENTAKEZ_TOKEN aus seiner .env-Datei ein oder den generierten Token aus seinem Log (docker compose logs).</string>
+    <string name="token_save">Weiter</string>
+    <string name="token_cancel">Abbrechen</string>
+    <string name="token_wrong">Dieser Token wurde nicht akzeptiert.</string>
+
+    <string name="engine_label">Download</string>
+    <string name="engine_device">Auf diesem Gerät</string>
+    <string name="engine_server">Über meinen Server</string>
+    <string name="engine_preparing">Wird vorbereitet ...</string>
+    <string name="engine_failed">Die Engine auf dem Gerät konnte nicht starten. Starte die App neu oder nutze deinen Server.</string>
+
+    <string name="ytdlp_version">yt-dlp-Version</string>
+    <string name="ytdlp_update">Aktualisieren</string>
+    <string name="ytdlp_updating">Wird aktualisiert ...</string>
+    <string name="ytdlp_updated">Aktualisiert auf %1$s</string>
+    <string name="ytdlp_updateAlreadyLatest">yt-dlp ist bereits aktuell.</string>
+    <string name="ytdlp_updateFailed">Aktualisierung fehlgeschlagen. Prüfe deine Verbindung.</string>
+
+    <string name="error_noLink">In diesem Text wurde kein Link gefunden.</string>
+    <string name="error_unsupported">Diese Seite wird noch nicht unterstützt.</string>
+    <string name="error_network">Server nicht erreichbar. Prüfe deine Verbindung oder die Server-URL in den Einstellungen.</string>
+    <string name="error_unknown">Etwas ist schiefgelaufen (%1$s).</string>
+    <string name="error_loginRequiredServer">Dafür ist ein Login nötig. Lade Cookies für %1$s in der Web-App deines Servers hoch.</string>
+    <string name="error_loginRequiredServerGeneric">Dafür ist ein Login nötig. Lade Cookies in der Web-App deines Servers hoch.</string>
+    <string name="error_rateLimited">Zu viele Anfragen. Versuch es in %1$d s noch einmal.</string>
+    <string name="error_busy">Der Server ist ausgelastet. Versuch es gleich noch einmal.</string>
+    <string name="error_needsServer">Fotos und Karussells brauchen deinen eigenen Server. Richte ihn in den Einstellungen ein.</string>
+    <string name="error_youtubeBlocked">YouTube hat diese Anfrage blockiert. Aktualisiere yt-dlp in den Einstellungen oder versuche es später noch einmal.</string>
+    <string name="error_storageFull">Nicht genug freier Speicherplatz auf diesem Gerät.</string>
+
+    <string name="notif_channel_downloads" tools:ignore="UnusedResources">Downloads</string>
+    <string name="notif_done" tools:ignore="UnusedResources">Gespeichert: %1$s</string>
+    <string name="notif_failed" tools:ignore="UnusedResources">Fehlgeschlagen: %1$s</string>
+    <string name="saved_to" tools:ignore="UnusedResources">Gespeichert in %1$s</string>
+
+    <string name="perm_notifications_rationale">Downloads zeigen ihren Fortschritt als Benachrichtigung.</string>
+    <string name="perm_continue">Weiter</string>
+    <string name="perm_notNow">Jetzt nicht</string>
+
+    <string name="a11y_withTitle">%1$s: %2$s</string>
+    <string name="a11y_failed">Fehlgeschlagen</string>
+</resources>

@@ -55,8 +55,11 @@ job runs -> notification with progress -> files saved to shared storage -> Histo
   `ServerConfig`.
 - `core/model/EngineError.kt`: the sealed set of failures. Cancelling is a coroutine
   `CancellationException`, never an `EngineError`.
-- `engine/MediaEngine.kt`: `suspend fun resolve(url)`, `fun download(url, option, workDir): Flow<EngineEvent>`,
-  with `EngineEvent.Progress` and a final `EngineEvent.Done(files, skipped)`.
+- `engine/MediaEngine.kt`: `suspend fun resolve(url)`,
+  `fun download(url, option, workDir, existingJobId): Flow<EngineEvent>`, with
+  `EngineEvent.Progress`, `EngineEvent.RemoteJobStarted(id)` for durable server jobs, and a final
+  `EngineEvent.Done(files, skipped)`. `releaseRemoteJob(id)` frees server files after the caller
+  has saved all files to shared storage; the device engine ignores both server-only operations.
 - `storage/FileSaver.kt`: `suspend fun save(file, displayName): SavedFile`.
 
 Both engines deliver plain files into a work directory the caller owns, so saving happens once.
@@ -108,7 +111,10 @@ requests, and the token still never appears in a URL. HTTPS only.
    stop; 404 -> `Lost`; 401 -> stop; otherwise reconnect with backoff 1, 2, 5, 10, 30 s, never
    shorter than a 429's `Retry-After`. If SSE fails twice, poll `GET /api/jobs/{id}` every 2 s.
 4. `GET /api/jobs/{id}/files/{index}` for each name in `Job.files`, streamed into the work directory.
-5. `DELETE /api/jobs/{id}` after the files are saved (frees server disk). A 409 or 404 is ignored.
+5. Persist the server job ID as soon as it is created. After process death, pass that ID back to
+   `download` to reattach with `GET /api/jobs/{id}`. `DELETE /api/jobs/{id}` only after the files
+   are saved to shared storage (frees server disk). A 409 or 404 is ignored. A save failure keeps
+   the server job ID for Retry.
 
 Minimum server version 1.0.0 (`GET /api/health`). `Job.error_code == "login_required"` ->
 `LoginRequired`; the message tells the user to upload cookies in the server's web app.

@@ -82,6 +82,10 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Compose/Robolectric tests need more than the 512 MB default.
+            it.maxHeapSize = "1536m"
+        }
     }
 
     // One APK per ABI (Python and ffmpeg are bundled, so a universal APK would be ~190 MB).
@@ -144,6 +148,7 @@ dependencies {
     implementation(libs.youtubedl.library)
     implementation(libs.youtubedl.ffmpeg)
 
+    testImplementation(kotlin("reflect"))
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
