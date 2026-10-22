@@ -32,6 +32,23 @@ updates:
         patterns: ["*"]
     labels: [dependencies, web]
 
+  # Android app (Gradle version catalog and plugins). The youtubedl-android libraries bundle
+  # yt-dlp, Python, and ffmpeg, so a new version needs a manual test on a device: own PR.
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    groups:
+      androidx:
+        patterns: ["androidx.*"]
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "com.google.devtools.ksp*"
+    # Everything outside a group, including io.github.junkfood02.youtubedl-android:*, gets
+    # its own pull request.
+    labels: [dependencies, android]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

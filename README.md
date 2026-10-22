@@ -12,7 +12,8 @@ playlists, and carousels. Spotify is [planned](docs/roadmap.md#planned-spotify).
   and ffmpeg.
 - **Private by default**: access token, short-lived download tickets, rate limits, read-only
   container. Nobody operates a public instance.
-- **Android app**: planned; runs yt-dlp directly on the device, no server needed.
+- **Android app**: runs yt-dlp directly on the device, no server needed, or sends links to your
+  server. See [docs/android.md](docs/android.md).
 
 Read the [DISCLAIMER](DISCLAIMER.md) before use.
 
@@ -32,7 +33,8 @@ Open http://localhost:8000 and enter the token. To use it on a phone, serve it o
 
 **[Self-hosting guide](docs/self-hosting.md)**: HTTPS with Caddy, Cloudflare Tunnel, all
 settings, backups, updating, Raspberry Pi, troubleshooting.
-**[Roadmap](docs/roadmap.md)**: native Android app, Spotify, and other plans.
+**[Android app](docs/android.md)**: install with Obtainium or APK, engines, pairing, building.
+**[Roadmap](docs/roadmap.md)**: Spotify, F-Droid, and other plans.
 **[Changelog](CHANGELOG.md)**.
 
 ### Limits
@@ -67,6 +69,15 @@ login again.
 runs as the app's user, so in principle it could read the stored cookies. This is an accepted
 risk: it is pinned to an exact version with hashes (`tools/gallery-dl.txt`), installed in its own
 root-owned environment, and started with a clean environment and a config generated per run.
+
+## Android app
+
+A native app that downloads on the phone itself, or through your own server. Share a link from
+any app, pick a format, and the file lands in Downloads, Music, or Pictures. Install it with
+[Obtainium](https://obtainium.imranr.dev) (add this repository) or download the APK for your
+phone from the [releases](https://github.com/timhofmann27-bot/OpenTakez/releases/latest); use
+`arm64-v8a` if unsure. Not on Google Play. Details, checksum verification, and building from
+source: [docs/android.md](docs/android.md).
 
 ## API
 
@@ -165,8 +176,9 @@ Releases: add the version to `CHANGELOG.md`, then push a tag `vX.Y.Z`. The
 ```
 backend/   FastAPI app: API, download jobs, providers (yt-dlp, gallery-dl)
 web/       React + Vite PWA (design contract: docs/design/pwa-contract.md)
+android/   Native Android app (Kotlin, Compose; see docs/android.md)
 tools/     Hash-pinned gallery-dl requirements for the Docker image
-docs/      Self-hosting guide, roadmap, design contracts
+docs/      Self-hosting guide, Android guide, roadmap, design contracts
 ```
 
 ## License
