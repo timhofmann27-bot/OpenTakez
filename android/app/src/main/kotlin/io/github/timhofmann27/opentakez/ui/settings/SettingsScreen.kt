@@ -1,29 +1,43 @@
 package io.github.timhofmann27.opentakez.ui.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudQueue
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -60,19 +74,50 @@ fun SettingsScreen(
     versionName: String = BuildConfig.VERSION_NAME,
 ) {
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         ScreenTitle(stringResource(R.string.nav_settings))
         ServerSection(state, onServerUrlChange, onTokenChange, onSave, onTest, onRemoveToken)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         DefaultEngineSection(state, onDefaultEngine)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         LanguageSection(state.language, onLanguage)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         YtDlpSection(state, onUpdateYtDlp)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         AboutSection(versionName)
+    }
+}
+
+@Composable
+private fun SettingsPanel(
+    title: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                SectionTitle(title, modifier = Modifier.weight(1f))
+            }
+            content()
+        }
     }
 }
 
@@ -86,8 +131,7 @@ private fun ServerSection(
     onTest: () -> Unit,
     onRemoveToken: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SectionTitle(stringResource(R.string.settings_server))
+    SettingsPanel(stringResource(R.string.settings_server), Icons.Outlined.CloudQueue) {
 
         OutlinedTextField(
             value = state.serverUrl,
@@ -176,30 +220,32 @@ private fun ConnectionOutcome(result: ConnectionResult) {
 
 @Composable
 private fun DefaultEngineSection(state: SettingsUiState, onSelect: (Engine) -> Unit) {
-    Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(stringResource(R.string.settings_defaultEngine))
-        ChoiceRow(
-            label = stringResource(R.string.engine_device),
-            selected = state.defaultEngine == Engine.DEVICE,
-            enabled = true,
-            onClick = { onSelect(Engine.DEVICE) },
-        )
-        ChoiceRow(
-            label = stringResource(R.string.engine_server),
-            selected = state.defaultEngine == Engine.SERVER,
-            enabled = state.serverSaved,
-            onClick = { onSelect(Engine.SERVER) },
-        )
+    SettingsPanel(stringResource(R.string.settings_defaultEngine), Icons.Outlined.PhoneAndroid) {
+        Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ChoiceRow(
+                label = stringResource(R.string.engine_device),
+                selected = state.defaultEngine == Engine.DEVICE,
+                enabled = true,
+                onClick = { onSelect(Engine.DEVICE) },
+            )
+            ChoiceRow(
+                label = stringResource(R.string.engine_server),
+                selected = state.defaultEngine == Engine.SERVER,
+                enabled = state.serverSaved,
+                onClick = { onSelect(Engine.SERVER) },
+            )
+        }
     }
 }
 
 @Composable
 private fun LanguageSection(language: String, onSelect: (String) -> Unit) {
-    Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(stringResource(R.string.settings_language))
-        ChoiceRow(stringResource(R.string.settings_languageSystem), language.isEmpty(), true) { onSelect("") }
-        ChoiceRow(stringResource(R.string.language_en), language == "en", true) { onSelect("en") }
-        ChoiceRow(stringResource(R.string.language_de), language == "de", true) { onSelect("de") }
+    SettingsPanel(stringResource(R.string.settings_language), Icons.Outlined.Language) {
+        Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ChoiceRow(stringResource(R.string.settings_languageSystem), language.isEmpty(), true) { onSelect("") }
+            ChoiceRow(stringResource(R.string.language_en), language == "en", true) { onSelect("en") }
+            ChoiceRow(stringResource(R.string.language_de), language == "de", true) { onSelect("de") }
+        }
     }
 }
 
@@ -209,8 +255,14 @@ private fun ChoiceRow(label: String, selected: Boolean, enabled: Boolean, onClic
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceContainerLow,
+            )
             .minTouchTarget()
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -218,7 +270,11 @@ private fun ChoiceRow(label: String, selected: Boolean, enabled: Boolean, onClic
         Text(
             label,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = when {
+                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant
+                selected -> MaterialTheme.colorScheme.onPrimaryContainer
+                else -> MaterialTheme.colorScheme.onSurface
+            },
             modifier = Modifier.weight(1f),
         )
     }
@@ -227,9 +283,12 @@ private fun ChoiceRow(label: String, selected: Boolean, enabled: Boolean, onClic
 @Composable
 private fun YtDlpSection(state: SettingsUiState, onUpdate: () -> Unit) {
     val updating = state.update == UpdateState.Updating
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(stringResource(R.string.ytdlp_version))
-        Text(state.ytDlpVersion ?: "–", style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace))
+    SettingsPanel(stringResource(R.string.ytdlp_version), Icons.Outlined.SystemUpdateAlt) {
+        Text(
+            state.ytDlpVersion ?: "–",
+            style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.primary,
+        )
         FilledTonalButton(onClick = onUpdate, enabled = !updating, modifier = Modifier.minTouchTarget()) {
             Text(stringResource(if (updating) R.string.ytdlp_updating else R.string.ytdlp_update))
         }
@@ -249,8 +308,7 @@ private fun YtDlpSection(state: SettingsUiState, onUpdate: () -> Unit) {
 
 @Composable
 private fun AboutSection(versionName: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(stringResource(R.string.settings_about))
+    SettingsPanel(stringResource(R.string.settings_about), Icons.Outlined.Info) {
         Text(
             stringResource(R.string.about_version, versionName),
             style = MaterialTheme.typography.bodyMedium,

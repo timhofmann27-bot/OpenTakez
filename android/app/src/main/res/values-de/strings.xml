@@ -124,4 +124,6 @@
 
     <string name="a11y_withTitle">%1$s: %2$s</string>
     <string name="a11y_failed">Fehlgeschlagen</string>
+    <string name="home_headline_first">Dein Link.</string>
+    <string name="home_headline_second">Dein Download.</string>
 </resources>

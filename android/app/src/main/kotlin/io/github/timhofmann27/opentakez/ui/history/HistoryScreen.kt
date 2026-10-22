@@ -2,37 +2,47 @@ package io.github.timhofmann27.opentakez.ui.history
 
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.timhofmann27.opentakez.R
 import io.github.timhofmann27.opentakez.core.model.EngineError
@@ -58,20 +68,48 @@ fun HistoryScreen(
     val context = LocalContext.current
     // Set when no app could open or share a file; cleared by the next successful action.
     var fileError by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    LaunchedEffect(fileError, notice) {
+        if (fileError || notice != null) listState.animateScrollToItem(0)
+    }
 
-    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        ScreenTitle(stringResource(R.string.nav_history), Modifier.padding(vertical = 16.dp))
-        notice?.let { ErrorBanner(it.toMessage(context), Modifier.padding(bottom = 8.dp)) }
-        if (fileError) ErrorBanner(stringResource(R.string.history_openFailed), Modifier.padding(bottom = 8.dp))
-        val chooserTitle = stringResource(R.string.history_share)
-        when {
-            items == null -> Unit
-            items.isEmpty() -> Text(
-                stringResource(R.string.history_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+    val chooserTitle = stringResource(R.string.history_share)
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = listState,
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item { ScreenTitle(stringResource(R.string.nav_history)) }
+        notice?.let { error -> item { ErrorBanner(error.toMessage(context)) } }
+        if (fileError) item { ErrorBanner(stringResource(R.string.history_openFailed)) }
+        if (items != null) {
+            if (items.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 48.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                            Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Outlined.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(40.dp),
+                                )
+                            }
+                        }
+                        Text(
+                            stringResource(R.string.history_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            } else {
                 items(items, key = { it.id }) { entry ->
                     HistoryRow(
                         entry = entry,
@@ -80,10 +118,9 @@ fun HistoryScreen(
                         onDownloadAgain = { onDownloadAgain(entry.id) },
                         onRemove = { onRemove(entry.id) },
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
                 item {
-                    TextButton(onClick = onClear, modifier = Modifier.minTouchTarget().padding(vertical = 8.dp)) {
+                    TextButton(onClick = onClear, modifier = Modifier.minTouchTarget()) {
                         Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(stringResource(R.string.history_clear), modifier = Modifier.padding(start = 6.dp))
                     }
@@ -112,34 +149,53 @@ fun HistoryRow(
     val removeDescription = stringResource(R.string.a11y_withTitle, stringResource(R.string.job_remove), entry.title)
     val hasFiles = entry.files.isNotEmpty()
 
-    Row(modifier = modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Thumbnail(entry.thumbnail, entry.kind, Modifier.size(width = 80.dp, height = 56.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Thumbnail(entry.thumbnail, entry.kind, Modifier.size(width = 72.dp, height = 72.dp))
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        PlatformChip(entry.platform)
+                        Text(
+                            stringResource(entry.option.label()),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    date,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (entry.files.size > 1) {
+                    Text(
+                        stringResource(R.string.job_files, entry.files.size),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (entry.skipped > 0) {
+                    Text(
+                        stringResource(R.string.job_skipped, entry.skipped),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                PlatformChip(entry.platform)
-                Text(
-                    stringResource(entry.option.label()),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(date, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(entry.title, style = MaterialTheme.typography.bodyLarge)
-            if (entry.files.size > 1) {
-                Text(
-                    stringResource(R.string.job_files, entry.files.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (entry.skipped > 0) {
-                Text(
-                    stringResource(R.string.job_skipped, entry.skipped),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (hasFiles) {
                     FilledTonalButton(onClick = onOpen, modifier = Modifier.minTouchTarget()) {
                         Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))

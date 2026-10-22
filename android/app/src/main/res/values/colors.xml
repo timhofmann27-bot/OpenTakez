@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The PWA's bg token (web/src/index.css). -->
-    <color name="window_background">#F6F6F8</color>
+    <!-- Match the Compose background to avoid a flash while the activity starts. -->
+    <color name="window_background">#F7F5FB</color>
 </resources>

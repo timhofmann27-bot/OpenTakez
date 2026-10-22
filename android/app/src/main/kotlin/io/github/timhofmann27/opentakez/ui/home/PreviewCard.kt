@@ -8,11 +8,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +27,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -56,7 +62,12 @@ fun PreviewCard(
     val truncated = info.itemCount != null && info.totalItems != null && info.totalItems > info.itemCount
     val wide = info.kind == MediaKind.VIDEO
 
-    OutlinedCard(modifier = modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (wide) {
                 Thumbnail(info.thumbnail, info.kind, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
@@ -88,7 +99,7 @@ fun PreviewCard(
             Button(
                 onClick = onDownload,
                 enabled = !state.starting && !state.switching,
-                modifier = Modifier.fillMaxWidth().minTouchTarget(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             ) {
                 Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(
@@ -104,7 +115,11 @@ fun PreviewCard(
 @Composable
 private fun Details(info: MediaInfo, duration: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
             PlatformChip(info.platform)
             if (duration.isNotEmpty()) {
                 Text(duration, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -117,7 +132,7 @@ private fun Details(info: MediaInfo, duration: String) {
                 )
             }
         }
-        Text(info.title, style = MaterialTheme.typography.titleMedium)
+        Text(info.title, style = MaterialTheme.typography.titleLarge)
         info.uploader?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -125,7 +140,7 @@ private fun Details(info: MediaInfo, duration: String) {
 }
 
 /** Exactly the options the engine offered, grouped like the PWA: Video, Audio only, Photos. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun OptionPicker(
     options: List<DownloadOption>,
@@ -147,16 +162,23 @@ fun OptionPicker(
         groups.forEach { (title, items) ->
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().selectableGroup()) {
-                    items.forEachIndexed { index, option ->
-                        SegmentedButton(
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().selectableGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items.forEach { option ->
+                        FilterChip(
                             selected = option == selected,
                             onClick = { onSelect(option) },
-                            shape = SegmentedButtonDefaults.itemShape(index, items.size),
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.minTouchTarget(),
-                        ) {
-                            Text(stringResource(option.label()))
-                        }
+                            label = { Text(stringResource(option.label())) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                        )
                     }
                 }
             }

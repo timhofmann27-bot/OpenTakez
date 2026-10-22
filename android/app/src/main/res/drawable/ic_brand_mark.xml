@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same paths as the launcher, cropped to the mark for the in-app wordmark. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp" android:height="32dp"
+    android:viewportWidth="320" android:viewportHeight="320">
+    <group android:translateX="-96" android:translateY="-96">
+        <path android:pathData="M312,142.6A127.8,127.8 0 1 1 200,142.6"
+            android:strokeColor="#A182FD" android:strokeWidth="41" android:strokeLineCap="round" />
+        <path android:pathData="M256,127.8V250" android:strokeColor="#A182FD"
+            android:strokeWidth="41.6" android:strokeLineCap="round" />
+        <path android:pathData="M202.9,242.7H309.1L256,295.8Z" android:fillColor="#A182FD"
+            android:strokeColor="#A182FD" android:strokeWidth="24.4" android:strokeLineJoin="round" />
+    </group>
+</vector>

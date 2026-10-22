@@ -1,6 +1,7 @@
 package io.github.timhofmann27.opentakez.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -42,7 +43,7 @@ fun Modifier.minTouchTarget(): Modifier = heightIn(min = MinTouchTarget)
 fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.headlineLarge,
         modifier = modifier.semantics { heading() },
     )
 }
@@ -112,8 +113,9 @@ fun Thumbnail(url: String?, kind: MediaKind, modifier: Modifier = Modifier) {
     }
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), MaterialTheme.shapes.medium),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

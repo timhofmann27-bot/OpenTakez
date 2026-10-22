@@ -7,6 +7,15 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Download
@@ -18,6 +27,9 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,9 +42,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -74,6 +89,7 @@ object DownloadPermissions {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppRoot(
     services: AppServices,
@@ -174,86 +190,105 @@ fun AppRoot(
     BackHandler(enabled = tab != Tab.HOME) { tab = Tab.HOME }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.imePadding(),
         bottomBar = {
+            // The keyboard already covers the bottom; a nav bar riding on top of it only eats space.
             val navLabel = stringResource(R.string.nav_main)
-            NavigationBar(modifier = Modifier.semantics { contentDescription = navLabel }) {
-                Tab.entries.forEach { entry ->
-                    val label = stringResource(entry.label)
-                    NavigationBarItem(
-                        selected = tab == entry,
-                        onClick = { tab = entry },
-                        icon = {
-                            if (entry == Tab.DOWNLOADS && runningCount > 0) {
-                                val running = stringResource(R.string.downloads_active, runningCount)
-                                BadgedBox(
-                                    badge = {
-                                        Badge(modifier = Modifier.semantics { contentDescription = running }) {
-                                            Text(runningCount.toString())
-                                        }
-                                    },
-                                ) { Icon(entry.icon, contentDescription = null) }
-                            } else {
-                                Icon(entry.icon, contentDescription = null)
-                            }
-                        },
-                        label = { Text(label) },
-                        modifier = Modifier.minTouchTarget(),
-                    )
+            if (!WindowInsets.isImeVisible) Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                NavigationBar(
+                    modifier = Modifier
+                        .heightIn(min = if (LocalDensity.current.fontScale > 1.3f) 112.dp else 80.dp)
+                        .semantics { contentDescription = navLabel },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 0.dp,
+                ) {
+                    Tab.entries.forEach { entry ->
+                        val label = stringResource(entry.label)
+                        NavigationBarItem(
+                            selected = tab == entry,
+                            onClick = { tab = entry },
+                            icon = {
+                                if (entry == Tab.DOWNLOADS && runningCount > 0) {
+                                    val running = stringResource(R.string.downloads_active, runningCount)
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(modifier = Modifier.semantics { contentDescription = running }) {
+                                                Text(runningCount.toString())
+                                            }
+                                        },
+                                    ) { Icon(entry.icon, contentDescription = null) }
+                                } else {
+                                    Icon(entry.icon, contentDescription = null)
+                                }
+                            },
+                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                            modifier = Modifier.minTouchTarget(),
+                        )
+                    }
                 }
             }
         },
     ) { padding ->
-        val content = Modifier.padding(padding)
-        when (tab) {
-            Tab.HOME -> HomeScreen(
-                state = homeState,
-                onTextChange = homeVm::setText,
-                onPaste = {
-                    scope.launch {
-                        val text = clipboard.getClipEntry()?.clipData?.takeIf { it.itemCount > 0 }
-                            ?.getItemAt(0)?.coerceToText(context)?.toString()
-                        homeVm.paste(text)
-                    }
-                },
-                onClear = homeVm::clear,
-                onSubmit = homeVm::submit,
-                onSelectOption = homeVm::selectOption,
-                onSelectEngine = homeVm::selectEngine,
-                onDownload = ::beforeDownload,
-                onTokenSubmit = homeVm::submitToken,
-                onTokenDismiss = homeVm::dismissTokenDialog,
-                modifier = content,
-            )
-            Tab.DOWNLOADS -> DownloadsScreen(
-                items = downloadItems,
-                notice = downloadsNotice,
-                onCancel = downloadsVm::cancel,
-                onRetry = downloadsVm::retry,
-                onRemove = downloadsVm::remove,
-                modifier = content,
-            )
-            Tab.HISTORY -> HistoryScreen(
-                items = historyItems,
-                notice = historyNotice,
-                fileActions = fileActions,
-                onDownloadAgain = historyVm::downloadAgain,
-                onRemove = historyVm::remove,
-                onClear = historyVm::clear,
-                modifier = content,
-            )
-            Tab.SETTINGS -> SettingsScreen(
-                state = settingsState,
-                onServerUrlChange = settingsVm::setServerUrl,
-                onTokenChange = settingsVm::setToken,
-                onSave = settingsVm::save,
-                onTest = settingsVm::testConnection,
-                onRemoveToken = settingsVm::removeToken,
-                onDefaultEngine = settingsVm::setDefaultEngine,
-                onLanguage = settingsVm::setLanguage,
-                onUpdateYtDlp = settingsVm::updateYtDlp,
-                modifier = content,
-            )
+        Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            val content = Modifier.widthIn(max = 720.dp).fillMaxSize()
+            when (tab) {
+                Tab.HOME -> HomeScreen(
+                    state = homeState,
+                    onTextChange = homeVm::setText,
+                    onPaste = {
+                        scope.launch {
+                            val text = clipboard.getClipEntry()?.clipData?.takeIf { it.itemCount > 0 }
+                                ?.getItemAt(0)?.coerceToText(context)?.toString()
+                            homeVm.paste(text)
+                        }
+                    },
+                    onClear = homeVm::clear,
+                    onSubmit = homeVm::submit,
+                    onSelectOption = homeVm::selectOption,
+                    onSelectEngine = homeVm::selectEngine,
+                    onDownload = ::beforeDownload,
+                    onTokenSubmit = homeVm::submitToken,
+                    onTokenDismiss = homeVm::dismissTokenDialog,
+                    modifier = content,
+                )
+                Tab.DOWNLOADS -> DownloadsScreen(
+                    items = downloadItems,
+                    notice = downloadsNotice,
+                    onCancel = downloadsVm::cancel,
+                    onRetry = downloadsVm::retry,
+                    onRemove = downloadsVm::remove,
+                    modifier = content,
+                )
+                Tab.HISTORY -> HistoryScreen(
+                    items = historyItems,
+                    notice = historyNotice,
+                    fileActions = fileActions,
+                    onDownloadAgain = historyVm::downloadAgain,
+                    onRemove = historyVm::remove,
+                    onClear = historyVm::clear,
+                    modifier = content,
+                )
+                Tab.SETTINGS -> SettingsScreen(
+                    state = settingsState,
+                    onServerUrlChange = settingsVm::setServerUrl,
+                    onTokenChange = settingsVm::setToken,
+                    onSave = settingsVm::save,
+                    onTest = settingsVm::testConnection,
+                    onRemoveToken = settingsVm::removeToken,
+                    onDefaultEngine = settingsVm::setDefaultEngine,
+                    onLanguage = settingsVm::setLanguage,
+                    onUpdateYtDlp = settingsVm::updateYtDlp,
+                    modifier = content,
+                )
+            }
         }
     }
 }

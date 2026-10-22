@@ -18,6 +18,8 @@
     <string name="url_submit">Check link</string>
     <string name="home_hint">Paste a link from YouTube, TikTok, Instagram, Facebook, or SoundCloud, or share it to OpenTakez from another app.</string>
     <string name="home_resolving">Checking link …</string>
+    <string name="home_headline_first">Your link.</string>
+    <string name="home_headline_second">Your download.</string>
 
     <string name="preview_format">Format</string>
     <string name="preview_download">Download</string>
