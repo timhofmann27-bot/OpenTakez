@@ -17,6 +17,7 @@ pkg install -y python ffmpeg nodejs curl
 # Termux's Python is 3.14. PyPI has no Android wheel for pydantic-core, and
 # pip ignores the third-party index wheel (it then tries a Rust source build,
 # which this phone cannot do). Download the wheel and install the file.
+# /tmp is often not writable (Termux noexec / EACCES). $PREFIX/tmp is.
 ARCH=$(uname -m)
 case "$ARCH" in
     aarch64) ABI_TAG="arm64_v8a" ;;
@@ -28,12 +29,11 @@ esac
 PY_TAG=$(python -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')
 WHEEL="pydantic_core-2.50.0-${PY_TAG}-${PY_TAG}-android_24_${ABI_TAG}.whl"
 WHEEL_URL="https://github.com/Eutalix/android-pydantic-core/releases/download/v2.50.0/${WHEEL}"
-curl -fL --retry 3 -o "/tmp/${WHEEL}" "$WHEEL_URL" \
+WHEEL_DIR="${PREFIX:-$HOME}/tmp"
+mkdir -p "$WHEEL_DIR"
+WHEEL_PATH="${WHEEL_DIR}/${WHEEL}"
+curl -fL --retry 3 -o "$WHEEL_PATH" "$WHEEL_URL" \
     || { echo "pydantic-core wheel download failed. Stop; do not build from source." >&2; exit 1; }
-pip install "/tmp/${WHEEL}" \
-    || { echo "pydantic-core wheel install failed. Stop; do not build from source." >&2; exit 1; }
-rm -f "/tmp/${WHEEL}"
-pip install 'pydantic==2.14.0'
 # gallery-dl is a separate program (GPL-2.0-only). Photo posts need it; video does not.
 pip install --upgrade 'gallery-dl==1.32.17' || echo "gallery-dl install failed; photo posts will not work"
 
@@ -46,6 +46,11 @@ cd "$ROOT/backend"
 python -m venv .venv
 # shellcheck disable=SC1091
 source .venv/bin/activate
+# Install the wheel into this venv. A system pip install would not be visible here.
+pip install "$WHEEL_PATH" \
+    || { echo "pydantic-core wheel install failed. Stop; do not build from source." >&2; exit 1; }
+rm -f "$WHEEL_PATH"
+pip install 'pydantic==2.14.0'
 # No [standard]: uvloop, httptools and watchfiles have no Android wheels.
 pip install -e . 'uvicorn>=0.32'
 
