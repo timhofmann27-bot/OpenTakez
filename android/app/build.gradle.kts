@@ -35,6 +35,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Release signing comes from the environment (CI secrets); without it the APK stays unsigned.
+    // ANDROID_KEYSTORE_FILE is a path to the .jks; the three others are its passwords and alias.
+    val releaseKeystore = System.getenv("ANDROID_KEYSTORE_FILE")
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -43,6 +57,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (releaseKeystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             // Local smoke test of the minified build (-Popentakez.debugSignRelease=true): signed
             // with the debug key so it installs on an emulator. Never used for published APKs.
             if (providers.gradleProperty("opentakez.debugSignRelease").isPresent) {
