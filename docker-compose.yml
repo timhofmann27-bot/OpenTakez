@@ -1,15 +1,23 @@
 services:
   opentakez:
+    # `docker compose pull` fetches the published image; `docker compose build` builds this
+    # checkout locally and tags it with the same name (see docs/self-hosting.md).
+    image: ghcr.io/timhofmann27-bot/opentakez:latest
     build: .
-    image: opentakez
     container_name: opentakez
     restart: unless-stopped
     ports:
       - "${OPENTAKEZ_PORT:-8000}:8000"
     env_file: .env
     volumes:
-      # Generated token and temporary downloads (deleted after OPENTAKEZ_FILE_TTL_HOURS).
+      # Generated token, uploaded cookies, and temporary downloads (deleted after
+      # OPENTAKEZ_FILE_TTL_HOURS). The only persistent, writable place in the container.
       - opentakez-data:/data
+    # Everything else is read-only. OPENTAKEZ_UPDATE_YTDLP=true needs `read_only: false`.
+    read_only: true
+    tmpfs:
+      # Per-run gallery-dl config, cookie copies, and yt-dlp/Deno caches. Downloads go to /data.
+      - /tmp:size=512m,mode=1777
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     healthcheck:

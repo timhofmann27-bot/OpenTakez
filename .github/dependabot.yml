@@ -1,0 +1,49 @@
+# Images are only built on release tags, so dependency updates arrive here as pull requests.
+# yt-dlp matters most: platforms break often and fixes ship in new yt-dlp releases.
+version: 2
+updates:
+  # backend/uv.lock. yt-dlp gets its own PR; everything else is grouped.
+  - package-ecosystem: uv
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend:
+        patterns: ["*"]
+        exclude-patterns: ["yt-dlp"]
+    labels: [dependencies, backend]
+
+  # pip-compile requirements in tools/gallery-dl.txt, generated from tools/gallery-dl.in.
+  - package-ecosystem: pip
+    directory: /tools
+    schedule:
+      interval: weekly
+    groups:
+      gallery-dl:
+        patterns: ["*"]
+    labels: [dependencies, gallery-dl]
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      web:
+        patterns: ["*"]
+    labels: [dependencies, web]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies, ci]
+
+  # Base images in the Dockerfile (node, python, uv, deno).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [dependencies, docker]

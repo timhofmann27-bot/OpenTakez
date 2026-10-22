@@ -7,6 +7,15 @@ const t = (key: Parameters<typeof translate>[1], vars?: Record<string, string | 
   translate('en', key, vars)
 
 describe('errorMessage', () => {
+  it('maps 429 to the rate limit text with the Retry-After seconds', () => {
+    const error = new ApiError(429, 'Too many requests, try again later', undefined, 17)
+    expect(errorMessage(error, t)).toBe('Too many requests. Try again in 17 s.')
+  })
+
+  it('falls back to a minute when a 429 has no Retry-After', () => {
+    expect(errorMessage(new ApiError(429, 'x'), t)).toBe('Too many requests. Try again in 60 s.')
+  })
+
   it('maps 503 to the busy text', () => {
     expect(errorMessage(new ApiError(503, 'Server busy'), t)).toBe('The server is busy. Try again in a moment.')
   })

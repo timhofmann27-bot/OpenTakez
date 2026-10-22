@@ -1,5 +1,7 @@
 # --- Build the PWA ---
-FROM node:24-slim AS web
+# The bundle is platform-independent: build it natively on the build machine, even when the
+# runtime image is cross-built for another architecture (linux/arm64 under QEMU is slow).
+FROM --platform=$BUILDPLATFORM node:24-slim AS web
 RUN npm install -g pnpm@11.20.0
 WORKDIR /web
 COPY web/package.json web/pnpm-lock.yaml ./
@@ -9,6 +11,10 @@ RUN pnpm build
 
 # --- Runtime: FastAPI serves the API and the built PWA ---
 FROM python:3.12-slim
+LABEL org.opencontainers.image.title="OpenTakez" \
+      org.opencontainers.image.description="Self-hosted media downloader (yt-dlp, gallery-dl) with an installable PWA" \
+      org.opencontainers.image.source="https://github.com/timhofmann27-bot/OpenTakez" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
 COPY --from=ghcr.io/astral-sh/uv:0.12.3 /uv /usr/local/bin/uv
 # yt-dlp needs a JavaScript runtime for YouTube.
 COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
@@ -32,7 +38,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     OPENTAKEZ_WEB_DIR=/app/web/dist \
     # Absolute: the app-writable /app/.venv/bin is first on PATH and must not shadow gallery-dl.
     OPENTAKEZ_GALLERY_DL_BIN=/opt/gallery-dl/bin/gallery-dl \
-    OPENTAKEZ_DATA_DIR=/data
+    OPENTAKEZ_DATA_DIR=/data \
+    # The container runs with a read-only root filesystem: caches (yt-dlp, Deno) go to the /tmp
+    # tmpfs, and bytecode for the app code is not written at runtime.
+    XDG_CACHE_HOME=/tmp/.cache \
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app/backend
 COPY backend/pyproject.toml backend/uv.lock ./

@@ -2,15 +2,34 @@ import logging
 import re
 import secrets
 from pathlib import Path
+from urllib.parse import unquote_plus
 
 from fastapi import Request, Response
 from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import Settings
 
+HEALTH_PATH = "/api/health"
+
 log = logging.getLogger("opentakez")
 
-_TOKEN_QUERY_RE = re.compile(r"(token=)[^&\s\"]+")
+_QUERY_PARAM_RE = re.compile(r"(^|[?&])([^=?&#\s\"]+)=([^&#\s\"]*)")
+
+
+def _redact_query_secrets(value: str) -> str:
+    """Redact raw query values before decoding can turn %26 into a separator."""
+
+    def replace(match: re.Match[str]) -> str:
+        separator, raw_name, _ = match.groups()
+        decoded_name = unquote_plus(raw_name)
+        if decoded_name in {"token", "ticket"}:
+            return f"{separator}{decoded_name}=[redacted]"
+        return match.group(0)
+
+    return _QUERY_PARAM_RE.sub(replace, value)
+
 
 # The PWA loads thumbnails from platform CDNs and may talk to another self-hosted server
 # (Settings → server URL), so images and connections allow any https origin.
@@ -52,13 +71,12 @@ def ensure_token(settings: Settings) -> None:
 
 
 class RedactTokenFilter(logging.Filter):
-    """Remove `?token=` values from access log lines (EventSource and file links carry it)."""
+    """Remove `token=` and `ticket=` values from access log lines."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.args, tuple):
             record.args = tuple(
-                _TOKEN_QUERY_RE.sub(r"\1[redacted]", arg) if isinstance(arg, str) else arg
-                for arg in record.args
+                _redact_query_secrets(arg) if isinstance(arg, str) else arg for arg in record.args
             )
         return True
 
@@ -73,3 +91,21 @@ async def security_headers(request: Request, call_next: RequestResponseEndpoint)
     else:
         response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     return response
+
+
+class HostGuard:
+    """TrustedHostMiddleware, but the health endpoint answers any Host.
+
+    The container healthcheck calls 127.0.0.1, which an allowed_hosts list of the public
+    name would reject, leaving the container permanently unhealthy.
+    """
+
+    def __init__(self, app: ASGIApp, allowed_hosts: list[str]) -> None:
+        self.app = app
+        self.guarded = TrustedHostMiddleware(app, allowed_hosts=allowed_hosts)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope.get("path") == HEALTH_PATH:
+            await self.app(scope, receive, send)
+            return
+        await self.guarded(scope, receive, send)

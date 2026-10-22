@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     gallery_dl_bin: str = "gallery-dl"
     gallery_dl_timeout: int = 300
     cors_origins: list[str] = ["http://localhost:5173"]
+    # Accepted Host headers (DNS rebinding protection). "*" allows any; set your public hostname.
+    allowed_hosts: list[str] = ["*"]
+    # Download tickets replace the token in EventSource and file links.
+    ticket_ttl_seconds: int = Field(600, ge=1)
+    # Per IP: requests per minute to resolve/jobs/cookies/ticket; failed auths before a lockout.
+    rate_limit_per_minute: int = Field(30, ge=1)
+    auth_fail_limit: int = Field(10, ge=1)
 
 
 settings = Settings()

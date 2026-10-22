@@ -28,7 +28,12 @@ test('download flow: resolve, pick MP3, finish via SSE, save, history', async ({
   expect(mock.jobBodies).toEqual([{ url: MEDIA.url, option: 'audio-mp3' }])
 
   await expect(page.getByRole('status').filter({ hasText: /^Done$/ })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Save' })).toHaveAttribute('href', '/api/jobs/job1/files/0')
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Save' }).click()
+  const url = (await download).url()
+  expect(url).toMatch(/\/api\/jobs\/job1\/files\/0\?ticket=tk-job1-\d+$/)
+  expect(url).not.toContain('token=')
+  expect(mock.mediaRequests.every((u) => !u.includes('token='))).toBe(true)
 
   await page.getByRole('link', { name: 'History' }).click()
   await expect(page).toHaveURL(/\/history$/)

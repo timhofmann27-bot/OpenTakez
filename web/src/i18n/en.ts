@@ -31,6 +31,7 @@ export const en = {
   'job.processing': 'Processing …',
   'job.done': 'Done',
   'job.save': 'Save',
+  'job.preparing': 'Preparing download …',
   'job.retry': 'Retry',
   'job.remove': 'Remove',
   'job.lost': 'The server restarted and lost this download.',

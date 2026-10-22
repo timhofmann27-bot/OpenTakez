@@ -17,6 +17,7 @@ from app.providers.base import (
     ProgressCallback,
     ProviderError,
 )
+from app.ratelimit import limits
 from app.urls import host_matches
 
 
@@ -59,6 +60,16 @@ class FakeProvider:
         return paths
 
 
+@pytest.fixture(autouse=True)
+def fresh_limits():
+    """Rate-limit state is process-global; every test starts clean on the real clock."""
+    limits.reset()
+    limits.clock = time.monotonic
+    yield limits
+    limits.reset()
+    limits.clock = time.monotonic
+
+
 @pytest.fixture
 def fake_provider() -> FakeProvider:
     return FakeProvider()
@@ -75,10 +86,12 @@ def client(tmp_path, monkeypatch, fake_provider):
         yield c
 
 
-def wait_for_job(client: TestClient, job_id: str, status: str, timeout: float = 5) -> dict:
+def wait_for_job(
+    client: TestClient, job_id: str, status: str, timeout: float = 5, headers: dict | None = None
+) -> dict:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        job = client.get(f"/api/jobs/{job_id}").json()
+        job = client.get(f"/api/jobs/{job_id}", headers=headers).json()
         if job["status"] == status:
             return job
         time.sleep(0.02)

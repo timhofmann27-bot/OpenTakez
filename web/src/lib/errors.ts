@@ -18,6 +18,8 @@ export function errorMessage(error: unknown, t: Translate, platform = ''): strin
   switch (error.kind) {
     case 'network':
       return t('error.network')
+    case 'rateLimited':
+      return t('error.rateLimited', { seconds: error.retryAfter ?? 60 })
     case 'busy':
       return t('error.busy')
     case 'badRequest':

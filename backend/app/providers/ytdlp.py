@@ -1,4 +1,5 @@
 import re
+import tempfile
 import time
 from collections.abc import Callable
 from contextlib import nullcontext
@@ -23,6 +24,10 @@ from app.providers.base import (
     ProviderError,
 )
 from app.urls import host_matches, trusted_thumbnail
+
+# Default is ~/.cache/yt-dlp, which is read-only (or missing) in the container. Player/signature
+# caches still speed up YouTube, so keep them under the temp dir.
+CACHE_DIR = Path(tempfile.gettempdir()) / "yt-dlp-cache"
 
 YoutubeDLFactory = Callable[[dict[str, Any]], YoutubeDL]
 
@@ -153,6 +158,7 @@ class YtDlpProvider:
     def _base_options(self) -> dict[str, Any]:
         return {
             "quiet": True,
+            "cachedir": str(CACHE_DIR),
             "no_warnings": True,
             "noprogress": True,
             "noplaylist": True,

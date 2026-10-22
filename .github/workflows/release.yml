@@ -1,0 +1,168 @@
+name: Release
+
+# Push a tag like v1.0.0 to publish ghcr.io/<owner>/opentakez (amd64 + arm64) and a GitHub
+# Release with the matching CHANGELOG.md section. Images are only rebuilt on tags; dependency
+# updates arrive as Dependabot pull requests (.github/dependabot.yml).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          # Nothing here pushes; don't leave a usable token in .git/config.
+          persist-credentials: false
+      - name: Check tag, versions, and release notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]]; then
+            echo "::error::Expected vX.Y.Z or vX.Y.Z-rc.N"
+            exit 1
+          fi
+          version="${TAG#v}"
+          test "$(jq -r .version web/package.json)" = "$version"
+          grep -Fqx "__version__ = \"$version\"" backend/app/__init__.py
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+            found && /[^[:space:]]/ { has_content = 1 }
+            END { exit !(found && has_content) }
+          ' CHANGELOG.md
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::Release commit must be on main"
+            exit 1
+          }
+
+  checks:
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  image:
+    runs-on: ubuntu-latest
+    needs: checks
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Image name (GHCR needs lowercase)
+        id: image
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "name=ghcr.io/${OWNER,,}/opentakez" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          flavor: latest=false
+          # Stable v1.2.3 → 1.2.3, v1.2.3, 1.2 and latest. A pre-release gets only its v tag.
+          tags: |
+            type=semver,pattern={{version}},enable=${{ !contains(github.ref_name, '-') }}
+            type=ref,event=tag
+            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=OpenTakez
+            org.opencontainers.image.description=Self-hosted media downloader (yt-dlp, gallery-dl) with an installable PWA
+            org.opencontainers.image.licenses=GPL-3.0-or-later
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          annotations: |
+            org.opencontainers.image.description=Self-hosted media downloader (yt-dlp, gallery-dl) with an installable PWA
+            org.opencontainers.image.licenses=GPL-3.0-or-later
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          # Lets anyone verify how the published image was built and what went into it.
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=release
+          cache-to: type=gha,scope=release,mode=max
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: image
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          # Lines between "## [<version>]" and the next "## [" heading, without the link
+          # definitions at the end of the file.
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+            /^\[[^]]+\]: / { next }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for [$version]"
+            exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/opentakez"
+          {
+            echo
+            echo "### Docker image"
+            echo
+            echo "~~~sh"
+            echo "docker pull $image:$version"
+            echo "~~~"
+            echo
+            echo "Platforms: linux/amd64, linux/arm64."
+          } >> notes.md
+          cat notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=()
+          if [[ "$TAG" == *-* ]]; then prerelease=(--prerelease); fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" --verify-tag --title "OpenTakez ${TAG#v}" \
+              --notes-file notes.md "${prerelease[@]}"
+          fi

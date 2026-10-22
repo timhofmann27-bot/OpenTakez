@@ -590,3 +590,13 @@ def test_playlist_thumbnails_are_filtered_too():
     provider = make_provider(FakeYoutubeDL(info=info), thumbnail_hosts=["ytimg.com"])
 
     assert provider.resolve("https://youtube.com/playlist").thumbnail is None
+
+
+def test_yt_dlp_cache_lives_under_the_temp_dir_for_read_only_containers():
+    import tempfile
+
+    ydl = FakeYoutubeDL(info=VIDEO_INFO)
+
+    make_provider(ydl).resolve("https://youtube.com/watch?v=abc")
+
+    assert Path(ydl.options["cachedir"]).is_relative_to(tempfile.gettempdir())

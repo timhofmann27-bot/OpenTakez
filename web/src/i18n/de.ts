@@ -34,6 +34,7 @@ export const de = {
   'job.processing': 'Wird verarbeitet …',
   'job.done': 'Fertig',
   'job.save': 'Speichern',
+  'job.preparing': 'Download wird vorbereitet …',
   'job.retry': 'Erneut',
   'job.remove': 'Entfernen',
   'job.lost': 'Der Server wurde neu gestartet, dieser Download ist verloren.',

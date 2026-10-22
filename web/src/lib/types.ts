@@ -70,3 +70,11 @@ export type CookieStatus = {
 export type CookieUpload = CookieStatus & { dropped_count: number }
 
 export const isFinished = (job: Job) => job.status === 'done' || job.status === 'error'
+
+/** Short-lived credential for the events, file and ZIP links of one job. */
+export type Ticket = {
+  ticket: string
+  expires_at: string
+  /** The server's `Date` response header, added by the client for clock-skew handling. */
+  server_date?: string
+}

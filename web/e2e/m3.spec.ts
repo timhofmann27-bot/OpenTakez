@@ -49,33 +49,32 @@ test('multi-file job offers a ZIP and one link per file', async ({ page }) => {
   await resolve(page, PHOTO_POST.url, PHOTO_POST.title)
   await page.getByRole('button', { name: 'Download' }).click()
 
-  const zip = page.getByRole('link', { name: 'Save all as ZIP' })
-  await expect(zip).toHaveAttribute('href', '/api/jobs/job1/zip')
+  const zip = page.getByRole('button', { name: 'Save all as ZIP' })
+  await expect(zip).toBeVisible()
   await expect(page.getByText('3 files')).toBeVisible()
   await expect(page.getByText('2.3 MB')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Save IMG_0002.jpg' })).toHaveAttribute(
-    'href',
-    '/api/jobs/job1/files/1',
-  )
+  await expect(page.getByRole('button', { name: 'Save IMG_0002.jpg' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await page.screenshot({ path: `${SHOTS}/390x844-m3-multi-file.png` })
 
   // Clicking starts a browser download; page.route doesn't see those requests.
   const download = page.waitForEvent('download')
   await zip.click()
-  expect((await download).url()).toMatch(/\/api\/jobs\/job1\/zip$/)
+  const url = (await download).url()
+  expect(url).toMatch(/\/api\/jobs\/job1\/zip\?ticket=tk-job1-\d+$/)
+  expect(url).not.toContain('token=')
 })
 
 test('multi-file history item lists its files after the availability check', async ({ page }) => {
   await mockApi(page, { media: PHOTO_POST, result: { files: ['a.jpg', 'b.jpg'], sizes: [10, 20] } })
   await resolve(page, PHOTO_POST.url, PHOTO_POST.title)
   await page.getByRole('button', { name: 'Download' }).click()
-  await expect(page.getByRole('link', { name: 'Save all as ZIP' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save all as ZIP' })).toBeVisible()
 
   await page.getByRole('link', { name: 'History' }).click()
   await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Save all as ZIP' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Save b.jpg' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save all as ZIP' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save b.jpg' })).toBeVisible()
 })
 
 test.describe('login required', () => {

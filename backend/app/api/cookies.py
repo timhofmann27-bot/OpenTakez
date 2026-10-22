@@ -3,11 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from starlette.concurrency import run_in_threadpool
 
-from app.api.auth import require_token
+from app.api.auth import reject_locked_out, require_token
 from app.config import settings
 from app.cookies import COOKIE_PLATFORMS, CookieError, CookieStatus, CookieStore, CookieUpload
+from app.ratelimit import RateLimited
 
-router = APIRouter(prefix="/api/cookies", dependencies=[Depends(require_token)])
+router = APIRouter(
+    prefix="/api/cookies", dependencies=[Depends(reject_locked_out), Depends(require_token)]
+)
 
 
 def get_cookies(request: Request) -> CookieStore:
@@ -29,7 +32,9 @@ def list_cookies(store: CookiesDep) -> list[CookieStatus]:
 
 
 @router.put("/{platform}")
-async def upload_cookies(platform: str, request: Request, store: CookiesDep) -> CookieUpload:
+async def upload_cookies(
+    platform: str, request: Request, store: CookiesDep, _: RateLimited
+) -> CookieUpload:
     """Raw cookies.txt as the body. The size limit applies to the declared and the actual size."""
     _known(platform)
     limit = settings.cookie_max_kb * 1024

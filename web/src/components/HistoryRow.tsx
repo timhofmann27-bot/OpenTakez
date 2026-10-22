@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useT } from '../i18n'
-import { ApiError, api, fileUrl } from '../lib/api'
+import { ApiError, api } from '../lib/api'
+import { downloadFile } from '../lib/download'
 import { errorMessage } from '../lib/errors'
 import { type HistoryItem, markGone, removeHistory } from '../lib/history'
 import { pendingLink } from '../lib/pending'
@@ -11,16 +12,16 @@ import { Icon } from './Icon'
 import { PlatformChip } from './PlatformChip'
 import { Thumbnail } from './Thumbnail'
 
-function triggerDownload(href: string, fileName: string) {
-  const link = document.createElement('a')
-  link.href = href
-  link.download = fileName
-  link.click()
-}
-
 export function HistoryRow({ item }: { item: HistoryItem }) {
   const t = useT()
   const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
   /** The job as the server reports it, once we know its files are still there (multi-file only). */
   const [available, setAvailable] = useState<Job | null>(null)
   const multi = item.fileNames.length > 1
@@ -30,19 +31,27 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
   })
 
   async function save() {
+    if (busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
     setNotice('')
     // Files expire on the server, so check before navigating to a dead link.
     try {
       const job = await api.getJob(item.id)
+      if (!mounted.current) return
       if (job.status !== 'done') {
         setAvailable(null)
         await markGone(item.id)
       } else if (multi) setAvailable(job)
-      else triggerDownload(fileUrl(item.id), item.fileName)
+      else await downloadFile(item.id, 0, item.fileName)
     } catch (error) {
+      if (!mounted.current) return
       setAvailable(null)
       if (error instanceof ApiError && error.kind === 'notFound') await markGone(item.id)
       else setNotice(errorMessage(error, t))
+    } finally {
+      busyRef.current = false
+      if (mounted.current) setBusy(false)
     }
   }
 
@@ -69,6 +78,7 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
             {notice}
           </p>
         )}
+        {busy && <span role="status" className="sr-only">{t('job.preparing')}</span>}
         <div className="mt-1 flex flex-wrap gap-2">
           {item.gone ? (
             <button
@@ -91,7 +101,8 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
             <button
               type="button"
               onClick={save}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-3 text-sm font-medium"
+              aria-disabled={busy}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface-2 px-3 text-sm font-medium aria-disabled:opacity-60"
             >
               <Icon name="save" className="size-4" />
               {t('job.save')}

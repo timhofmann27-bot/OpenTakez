@@ -3,6 +3,7 @@ import re
 import threading
 import unicodedata
 from collections.abc import AsyncIterator
+from datetime import datetime
 from typing import Annotated
 from urllib.parse import quote
 
@@ -10,15 +11,29 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.api.auth import require_token
+from app import tickets
+from app.api.auth import (
+    reject_locked_out,
+    reject_locked_out_link,
+    require_token,
+    require_token_or_ticket,
+)
 from app.config import settings
 from app.jobs.manager import FINISHED, Job, JobManager, JobStatus, QueueFullError
 from app.providers import Providers, UnsupportedUrlError
 from app.providers.base import DownloadOption, MediaInfo, Provider, ProviderError
+from app.ratelimit import RateLimited
 from app.urls import extract_url
 from app.zipstream import stream_zip
 
-router = APIRouter(prefix="/api", dependencies=[Depends(require_token)])
+router = APIRouter(prefix="/api", dependencies=[Depends(reject_locked_out), Depends(require_token)])
+# Links that can't send headers: the Bearer token or a ticket for that job.
+# Every route mounted here MUST have a `{job_id}` path parameter: require_token_or_ticket
+# declares it, so a route without it would answer 422 instead of authenticating.
+link_router = APIRouter(
+    prefix="/api",
+    dependencies=[Depends(reject_locked_out_link), Depends(require_token_or_ticket)],
+)
 
 SSE_POLL_SECONDS = 0.5
 RESOLVE_WAIT_SECONDS = 30
@@ -73,7 +88,7 @@ def _job_or_404(jobs: JobManager, job_id: str) -> Job:
 
 
 @router.post("/resolve")
-def resolve(body: ResolveRequest, providers: ProvidersDep) -> MediaInfo:
+def resolve(body: ResolveRequest, providers: ProvidersDep, _: RateLimited) -> MediaInfo:
     provider, url = _provider_for(providers, body.url)
     if not _resolve_slots.acquire(timeout=RESOLVE_WAIT_SECONDS):
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Server is busy, try again")
@@ -87,7 +102,7 @@ def resolve(body: ResolveRequest, providers: ProvidersDep) -> MediaInfo:
 
 
 @router.post("/jobs", status_code=status.HTTP_201_CREATED)
-def create_job(body: JobRequest, providers: ProvidersDep, jobs: JobsDep) -> Job:
+def create_job(body: JobRequest, providers: ProvidersDep, jobs: JobsDep, _: RateLimited) -> Job:
     provider, url = _provider_for(providers, body.url)
     if body.option not in provider.options:
         raise HTTPException(
@@ -107,7 +122,7 @@ def get_job(job_id: str, jobs: JobsDep) -> Job:
     return _job_or_404(jobs, job_id)
 
 
-@router.get("/jobs/{job_id}/events")
+@link_router.get("/jobs/{job_id}/events")
 async def job_events(job_id: str, request: Request, jobs: JobsDep) -> StreamingResponse:
     """Server-sent events with the job state whenever it changes, until it finishes."""
     _job_or_404(jobs, job_id)
@@ -150,17 +165,17 @@ def _file_response(jobs: JobManager, job_id: str, index: int) -> FileResponse:
     )
 
 
-@router.get("/jobs/{job_id}/files/{index}")
+@link_router.get("/jobs/{job_id}/files/{index}")
 def job_file_at(job_id: str, index: int, jobs: JobsDep) -> FileResponse:
     return _file_response(jobs, job_id, index)
 
 
-@router.get("/jobs/{job_id}/file")
+@link_router.get("/jobs/{job_id}/file")
 def job_file(job_id: str, jobs: JobsDep) -> FileResponse:
     return _file_response(jobs, job_id, 0)
 
 
-@router.get("/jobs/{job_id}/zip")
+@link_router.get("/jobs/{job_id}/zip")
 def job_zip(job_id: str, jobs: JobsDep) -> StreamingResponse:
     job = _finished_job(jobs, job_id)
     paths = [jobs.file_path(job, i) for i in range(len(job.files))]
@@ -172,6 +187,18 @@ def job_zip(job_id: str, jobs: JobsDep) -> StreamingResponse:
         media_type="application/zip",
         headers={"Content-Disposition": _content_disposition(name)},
     )
+
+
+class TicketResponse(BaseModel):
+    ticket: str
+    expires_at: datetime
+
+
+@router.post("/jobs/{job_id}/ticket")
+def create_ticket(job_id: str, jobs: JobsDep, _: RateLimited) -> TicketResponse:
+    _job_or_404(jobs, job_id)
+    ticket, expires_at = tickets.issue(job_id)
+    return TicketResponse(ticket=ticket, expires_at=expires_at)
 
 
 @router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)

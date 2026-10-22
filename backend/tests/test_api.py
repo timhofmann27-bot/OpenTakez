@@ -208,10 +208,12 @@ class TestToken:
         wrong = {"Authorization": "Bearer wrong"}
         assert client.get("/api/jobs/x", headers=wrong).status_code == 401
 
-    def test_bearer_header_and_query_token_are_accepted(self, client):
+    def test_bearer_header_is_accepted(self, client):
         headers = {"Authorization": "Bearer s3cret"}
         assert client.post("/api/resolve", json={"url": URL}, headers=headers).status_code == 200
-        assert client.post("/api/resolve?token=s3cret", json={"url": URL}).status_code == 200
+
+    def test_query_token_is_no_longer_accepted(self, client):
+        assert client.post("/api/resolve?token=s3cret", json={"url": URL}).status_code == 401
 
     def test_health_stays_public_and_reports_auth(self, client):
         response = client.get("/api/health")

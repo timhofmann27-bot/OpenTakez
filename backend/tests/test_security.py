@@ -37,7 +37,7 @@ class TestEnsureToken:
 
 def test_access_log_redacts_query_tokens():
     record = logging.LogRecord(
-        "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s"', 
+        "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s"',
         ("1.2.3.4", "GET", "/api/jobs/x/file?token=s3cret&a=1"), None,
     )  # fmt: skip
 
@@ -111,3 +111,45 @@ def test_download_is_capped(tmp_path):
     assert ydl.options["max_filesize"] == 1000
     assert ydl.options["playlist_items"] == "1:50"
     assert ydl.options["socket_timeout"] == 20
+
+
+def test_access_log_redacts_tickets():
+    record = logging.LogRecord(
+        "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s"',
+        ("1.2.3.4", "GET", "/api/jobs/x/zip?a=1&ticket=abc.def"), None,
+    )  # fmt: skip
+
+    RedactTokenFilter().filter(record)
+
+    assert "abc.def" not in record.getMessage()
+    assert "a=1&ticket=[redacted]" in record.getMessage()
+
+
+def test_access_log_redacts_percent_encoded_ticket_name():
+    record = logging.LogRecord(
+        "uvicorn.access", logging.INFO, "", 0, "%s", ("/api/jobs/x/file?%74icket=abc.def",), None
+    )
+
+    RedactTokenFilter().filter(record)
+
+    assert "abc.def" not in record.getMessage()
+    assert "ticket=[redacted]" in record.getMessage()
+
+
+def test_access_log_redacts_encoded_separator_inside_secret():
+    record = logging.LogRecord(
+        "uvicorn.access",
+        logging.INFO,
+        "",
+        0,
+        "%s",
+        ("/api/jobs/x/file?%74icket=first%26private-suffix&other=ok",),
+        None,
+    )
+
+    RedactTokenFilter().filter(record)
+
+    message = record.getMessage()
+    assert "first" not in message
+    assert "private-suffix" not in message
+    assert "other=ok" in message

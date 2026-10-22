@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, api, eventsUrl, fileUrl, setUnauthorizedHandler, zipUrl } from './api'
+import { ApiError, __resetTickets, api, dropTicket, eventsUrl, fileUrl, setUnauthorizedHandler, ticketFor, zipUrl } from './api'
 import { updateSettings } from './settings'
 
 const fetchMock = vi.fn()
@@ -17,6 +17,9 @@ beforeEach(() => {
 afterEach(() => {
   fetchMock.mockReset()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  __resetTickets()
+  vi.useRealTimers()
 })
 
 describe('api', () => {
@@ -101,20 +104,158 @@ describe('api', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('https://other.example.com/api/health')
   })
 
-  it('puts the token in the query for EventSource and file links', () => {
-    updateSettings({ token: 'a b&c' })
+  it('puts the ticket, never the token, in the query for EventSource and file links', () => {
+    updateSettings({ token: 'master-secret', serverUrl: 'https://dl.example.com' })
+    const urls = [eventsUrl('j1', 'a b&c'), fileUrl('j1', 0, 'tk'), fileUrl('j1', 2, 'tk'), zipUrl('j1', 'tk')]
 
-    expect(eventsUrl('j1')).toBe('/api/jobs/j1/events?token=a%20b%26c')
-    expect(fileUrl('j1')).toBe('/api/jobs/j1/files/0?token=a%20b%26c')
-    expect(fileUrl('j1', 2)).toBe('/api/jobs/j1/files/2?token=a%20b%26c')
-    expect(zipUrl('j1')).toBe('/api/jobs/j1/zip?token=a%20b%26c')
+    expect(urls[0]).toBe('https://dl.example.com/api/jobs/j1/events?ticket=a%20b%26c')
+    expect(urls[1]).toBe('https://dl.example.com/api/jobs/j1/files/0?ticket=tk')
+    expect(urls[2]).toBe('https://dl.example.com/api/jobs/j1/files/2?ticket=tk')
+    expect(urls[3]).toBe('https://dl.example.com/api/jobs/j1/zip?ticket=tk')
+    for (const url of urls) {
+      expect(url).not.toContain('token=')
+      expect(url).not.toContain('master-secret')
+    }
   })
 
-  it('omits the token query when no token is set', () => {
-    expect(fileUrl('j1')).toBe('/api/jobs/j1/files/0')
-    expect(zipUrl('j1')).toBe('/api/jobs/j1/zip')
+  it('requests a ticket with POST and the Bearer header', async () => {
+    updateSettings({ token: 's3cret' })
+    respond(200, { ticket: 'tk', expires_at: '2030-01-01T00:00:00Z' })
+
+    await expect(api.ticket('j 1')).resolves.toEqual({ ticket: 'tk', expires_at: '2030-01-01T00:00:00Z' })
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/jobs/j%201/ticket')
+    expect(init.method).toBe('POST')
+    expect(init.headers.get('Authorization')).toBe('Bearer s3cret')
   })
 
+  it('maps 429 to rateLimited with Retry-After seconds and no token prompt', async () => {
+    const handler = vi.fn()
+    setUnauthorizedHandler(handler)
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: 'Too many requests, try again later' }), {
+        status: 429,
+        headers: { 'Retry-After': '42' },
+      }),
+    )
+
+    const error = await api.ticket('j1').catch((e) => e)
+
+    expect(error).toMatchObject({ kind: 'rateLimited', status: 429, retryAfter: 42 })
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('leaves retryAfter undefined when the header is missing or invalid', async () => {
+    respond(429, { detail: 'x' })
+    expect(await api.ticket('j1').catch((e) => e)).toMatchObject({ kind: 'rateLimited', retryAfter: undefined })
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 429, headers: { 'Retry-After': 'soon' } }))
+    expect(await api.ticket('j1').catch((e) => e)).toMatchObject({ retryAfter: undefined })
+  })
+})
+
+describe('ticket cache', () => {
+  const ticketBody = (ticket: string, ttlMs: number) => ({
+    ticket,
+    expires_at: new Date(Date.now() + ttlMs).toISOString(),
+  })
+
+  beforeEach(() => {
+    dropTicket('j1')
+    dropTicket('j2')
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('reuses a ticket until 30 s before it expires, per job', async () => {
+    vi.useFakeTimers()
+    respond(200, ticketBody('t1', 600_000))
+    respond(200, ticketBody('t2', 600_000))
+    respond(200, ticketBody('t3', 600_000))
+
+    expect(await ticketFor('j1')).toBe('t1')
+    expect(await ticketFor('j1')).toBe('t1')
+    expect(await ticketFor('j2')).toBe('t2')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    vi.advanceTimersByTime(600_000 - 29_000)
+    expect(await ticketFor('j1')).toBe('t3')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('never reuses a ticket that is about to expire', async () => {
+    respond(200, ticketBody('short', 10_000))
+    respond(200, ticketBody('next', 600_000))
+
+    expect(await ticketFor('j1')).toBe('short')
+    expect(await ticketFor('j1')).toBe('next')
+  })
+
+  it('does not reuse a ticket after a 401 during refresh', async () => {
+    vi.useFakeTimers()
+    respond(200, ticketBody('expiring', 31_000))
+    expect(await ticketFor('j1')).toBe('expiring')
+    vi.advanceTimersByTime(2_000)
+    respond(401, { detail: 'Invalid or missing token' })
+    await expect(ticketFor('j1')).rejects.toMatchObject({ kind: 'unauthorized' })
+    respond(200, ticketBody('replacement', 600_000))
+    expect(await ticketFor('j1')).toBe('replacement')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('propagates errors such as a vanished job', async () => {
+    respond(404, { detail: 'Job not found' })
+    await expect(ticketFor('j1')).rejects.toMatchObject({ kind: 'notFound' })
+  })
+
+  it('shares one in-flight ticket POST between parallel callers', async () => {
+    let finish!: (value: Response) => void
+    fetchMock.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const first = ticketFor('j1')
+    const second = ticketFor('j1')
+    expect(fetchMock).toHaveBeenCalledOnce()
+
+    finish(new Response(JSON.stringify(ticketBody('shared', 600_000))))
+    expect(await Promise.all([first, second])).toEqual(['shared', 'shared'])
+    expect(await ticketFor('j1')).toBe('shared')
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('does not re-cache a ticket returned after dropTicket', async () => {
+    let finish!: (value: Response) => void
+    fetchMock.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const old = ticketFor('j1')
+    dropTicket('j1')
+    respond(200, ticketBody('fresh', 600_000))
+    expect(await ticketFor('j1')).toBe('fresh')
+    finish(new Response(JSON.stringify(ticketBody('old', 600_000))))
+    expect(await old).toBe('old')
+    expect(await ticketFor('j1')).toBe('fresh')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses the server Date to cache correctly when the phone clock is fast', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2030-01-01T00:20:00Z'))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      ticket: 'skew-safe', expires_at: '2030-01-01T00:10:00Z',
+    }), { headers: { Date: 'Tue, 01 Jan 2030 00:00:00 GMT' } }))
+
+    expect(await ticketFor('j1')).toBe('skew-safe')
+    expect(await ticketFor('j1')).toBe('skew-safe')
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('does not cache an unparseable expiry', async () => {
+    respond(200, { ticket: 'bad-date', expires_at: 'not a date' })
+    respond(200, ticketBody('valid', 600_000))
+
+    expect(await ticketFor('j1')).toBe('bad-date')
+    expect(await ticketFor('j1')).toBe('valid')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('api (misc)', () => {
   it('reads a {message, code} detail from a 422', async () => {
     respond(422, { detail: { message: 'Login required', code: 'login_required' } })
 
@@ -164,5 +305,22 @@ describe('api', () => {
     await expect(api.cookies.put('tiktok', 'x')).rejects.toMatchObject({ status: 413 })
     respond(422, { detail: 'Not a cookies.txt' })
     await expect(api.cookies.put('tiktok', 'x')).rejects.toMatchObject({ kind: 'platform', message: 'Not a cookies.txt' })
+  })
+})
+
+describe('no master token in URLs', () => {
+  it('has no "token=" query building anywhere in the app sources', () => {
+    const sources = import.meta.glob(['../**/*.{ts,tsx}', '!../**/*.test.{ts,tsx}'], {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>
+    const entries = Object.entries(sources)
+
+    const masterTokenQuery = /(?:[?&]token\b|\bURLSearchParams\s*\(\s*\{[^}]*\btoken\b|\.(?:set|append)\(\s*['"`]token['"`])/m
+    const offenders = entries.filter(([, source]) => masterTokenQuery.test(source)).map(([file]) => file)
+
+    expect(entries.length).toBeGreaterThan(10)
+    expect(offenders).toEqual([])
   })
 })

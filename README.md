@@ -1,36 +1,46 @@
 # OpenTakez
 
-All-in-one, self-hosted media downloader. Paste or share a link and get the video, photo, or audio file.
+All-in-one, self-hosted media downloader. Paste or share a link and get the video, photo, or
+audio file.
 
-Supported (work in progress): YouTube, TikTok, Instagram, Facebook, SoundCloud, and Spotify
-(via metadata matching, see [DISCLAIMER](DISCLAIMER.md)).
+Supported: YouTube, TikTok, Instagram, Facebook, and SoundCloud, including photo posts,
+playlists, and carousels. Spotify is [planned](docs/roadmap.md#planned-spotify).
 
 - **PWA**: install it on your phone, then use *Share → OpenTakez* from any app.
-- **Self-hosted**: one Docker container, powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- **Self-hosted**: one Docker container (`linux/amd64` and `linux/arm64`), powered by
+  [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl),
   and ffmpeg.
+- **Private by default**: access token, short-lived download tickets, rate limits, read-only
+  container. Nobody operates a public instance.
 - **Android app**: planned; runs yt-dlp directly on the device, no server needed.
 
-## Run with Docker
+Read the [DISCLAIMER](DISCLAIMER.md) before use.
+
+## Quick start
 
 ```sh
+git clone https://github.com/timhofmann27-bot/OpenTakez.git
+cd OpenTakez
 cp .env.example .env
-docker compose up -d --build
-docker compose logs opentakez | grep token   # the generated access token
+docker compose pull
+docker compose up -d
+docker compose logs opentakez | grep -i token   # the generated access token
 ```
 
-Open http://localhost:8000 and enter the token. Set your own with `OPENTAKEZ_TOKEN` in `.env`.
+Open http://localhost:8000 and enter the token. To use it on a phone, serve it over HTTPS, set
+`OPENTAKEZ_ALLOWED_HOSTS` to your host name, then in Chrome on Android: menu → *Install app*.
 
-To install the PWA on a phone the instance must be served over HTTPS, for example behind
-Caddy, Traefik, or a Cloudflare Tunnel. Set `OPENTAKEZ_FORWARDED_ALLOW_IPS` to the proxy's IP.
-
-Then on Android: open the site in Chrome → menu → *Install app*. OpenTakez now appears in
-the *Share* sheet of YouTube, SoundCloud, and other apps.
+**[Self-hosting guide](docs/self-hosting.md)**: HTTPS with Caddy, Cloudflare Tunnel, all
+settings, backups, updating, Raspberry Pi, troubleshooting.
+**[Roadmap](docs/roadmap.md)**: native Android app, Spotify, and other plans.
+**[Changelog](CHANGELOG.md)**.
 
 ### Limits
 
-Only single videos and tracks for now; playlists and channels are refused. Files larger than
-`OPENTAKEZ_MAX_FILE_MB` are skipped, and at most `OPENTAKEZ_MAX_QUEUED_JOBS` downloads may be
-pending at once.
+Playlists, sets, and carousels are cut off after `OPENTAKEZ_MAX_PLAYLIST_ITEMS` items; channels
+and profiles are refused. Files larger than `OPENTAKEZ_MAX_FILE_MB`, or jobs larger than
+`OPENTAKEZ_MAX_JOB_MB`, are skipped, and at most `OPENTAKEZ_MAX_QUEUED_JOBS` downloads may be
+pending at once. Downloads are deleted after `OPENTAKEZ_FILE_TTL_HOURS`.
 
 ### Logins (cookies)
 
@@ -58,11 +68,46 @@ runs as the app's user, so in principle it could read the stored cookies. This i
 risk: it is pinned to an exact version with hashes (`tools/gallery-dl.txt`), installed in its own
 root-owned environment, and started with a clean environment and a config generated per run.
 
-### Updating yt-dlp
+## API
 
-Platforms change often. Rebuild or pull a newer image to get a newer yt-dlp. As a stopgap,
-`OPENTAKEZ_UPDATE_YTDLP=true` installs the latest release on every start; that skips the
-pinned, reviewed version, so leave it off unless something is broken.
+All endpoints except `/api/health` need the token as `Authorization: Bearer <token>` (unless
+`OPENTAKEZ_ALLOW_NO_TOKEN=true`). The token is never accepted in the URL.
+
+Links that can't send headers (EventSource, `<a href>` downloads) use a **download ticket**:
+`POST /api/jobs/{id}/ticket` returns `{"ticket", "expires_at"}`, valid for
+`OPENTAKEZ_TICKET_TTL_SECONDS` (600) and only for that job. Pass it as `?ticket=` on the four
+routes marked below; it can be reused until it expires (reconnects, range requests). Tickets
+become invalid when the server restarts.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/health` | Version, supported platforms, whether a token is required (no auth) |
+| POST | `/api/resolve` | `{"url"}` → title, thumbnail, duration, item count, download options |
+| POST | `/api/jobs` | `{"url", "option"}` → start a download job |
+| GET | `/api/jobs/{id}` | Job status, progress, and file names |
+| POST | `/api/jobs/{id}/ticket` | Short-lived download ticket for this job |
+| GET | `/api/jobs/{id}/events` | Server-sent events with the job state until it finishes (Bearer or `?ticket=`) |
+| GET | `/api/jobs/{id}/file` | The (first) downloaded file (Bearer or `?ticket=`) |
+| GET | `/api/jobs/{id}/files/{index}` | File number `index` (from 0) of a job (Bearer or `?ticket=`) |
+| GET | `/api/jobs/{id}/zip` | All files of a job as a streamed ZIP (Bearer or `?ticket=`) |
+| DELETE | `/api/jobs/{id}` | Delete a finished job and its files |
+| GET | `/api/cookies` | Which platforms have cookies uploaded (never their content) |
+| PUT | `/api/cookies/{platform}` | Upload a `cookies.txt` as the raw `text/plain` body |
+| DELETE | `/api/cookies/{platform}` | Remove the cookies of a platform |
+
+`url` may be shared text that contains a link. Options: `video-best`, `video-1080`, `video-720`,
+`audio-mp3`, `audio-m4a`, `image-original`.
+
+**Rate limits.** Per client IP, `POST /api/resolve`, `POST /api/jobs`, `PUT /api/cookies/*`,
+and `POST /api/jobs/{id}/ticket` are limited to `OPENTAKEZ_RATE_LIMIT_PER_MINUTE` (30) requests
+per minute. After `OPENTAKEZ_AUTH_FAIL_LIMIT` (10) failed logins within 10 minutes, that IP gets
+`429` on all `/api/` routes except `/api/health` for 10 minutes. `429` responses carry a
+`Retry-After` header. Behind a reverse proxy, set `OPENTAKEZ_FORWARDED_ALLOW_IPS` so the real
+client IP is used.
+
+**Allowed hosts.** With `OPENTAKEZ_ALLOWED_HOSTS` set (JSON list), requests for any other
+`Host` get `400`, which protects against DNS rebinding. `/api/health` is exempt so the
+container health check keeps working.
 
 ## Development
 
@@ -94,35 +139,37 @@ cd web && pnpm test:e2e   # Playwright, mocked API (first: pnpm exec playwright 
 cd backend && uv run pytest -m slow
 ```
 
-## API
+Docker image from your checkout:
 
-All endpoints except `/api/health` need the token (unless `OPENTAKEZ_ALLOW_NO_TOKEN=true`), either as
-`Authorization: Bearer <token>` or as `?token=<token>`.
+```sh
+docker compose build
+# If buildx fails with "unexpected digest" or cache errors, use the default builder:
+BUILDX_BUILDER=default docker compose build
+```
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/health` | Version, supported platforms, whether a token is required |
-| POST | `/api/resolve` | `{"url"}` → title, thumbnail, duration, download options |
-| POST | `/api/jobs` | `{"url", "option"}` → start a download job |
-| GET | `/api/cookies` | Which platforms have cookies uploaded (never their content) |
-| PUT | `/api/cookies/{platform}` | Upload a `cookies.txt` as the raw `text/plain` body |
-| DELETE | `/api/cookies/{platform}` | Remove the cookies of a platform |
-| GET | `/api/jobs/{id}` | Job status and progress |
-| GET | `/api/jobs/{id}/events` | Server-sent events with the job state until it finishes |
-| GET | `/api/jobs/{id}/file` | The downloaded file |
-| DELETE | `/api/jobs/{id}` | Delete a finished job and its file |
+Dependencies: yt-dlp and the other backend packages are locked in `backend/uv.lock`; gallery-dl
+is pinned with hashes in `tools/gallery-dl.txt`, compiled from `tools/gallery-dl.in`. Dependabot
+opens update pull requests for both. To update gallery-dl by hand:
 
-`url` may be shared text that contains a link. Options: `video-best`, `video-1080`, `video-720`,
-`audio-mp3`, `audio-m4a`.
+```sh
+# Edit the version in tools/gallery-dl.in, then:
+uv pip compile --generate-hashes --python-version 3.12 -o tools/gallery-dl.txt tools/gallery-dl.in
+```
+
+Releases: add the version to `CHANGELOG.md`, then push a tag `vX.Y.Z`. The
+[release workflow](.github/workflows/release.yml) builds the amd64 and arm64 image, pushes it to
+`ghcr.io/timhofmann27-bot/opentakez`, and creates the GitHub Release.
 
 ## Project layout
 
 ```
-backend/   FastAPI app: API, download jobs, providers (yt-dlp, Spotify)
+backend/   FastAPI app: API, download jobs, providers (yt-dlp, gallery-dl)
 web/       React + Vite PWA (design contract: docs/design/pwa-contract.md)
-android/   Native Android app (planned)
+tools/     Hash-pinned gallery-dl requirements for the Docker image
+docs/      Self-hosting guide, roadmap, design contracts
 ```
 
 ## License
 
-[GPL-3.0](LICENSE). Read the [DISCLAIMER](DISCLAIMER.md) before use.
+[GPL-3.0](LICENSE). gallery-dl (GPL-2.0-only) is shipped as a separate program; see the
+[DISCLAIMER](DISCLAIMER.md).

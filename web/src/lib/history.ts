@@ -1,4 +1,5 @@
 import { clear, createStore as createIdbStore, del, get, set, values } from 'idb-keyval'
+import { dropTicket } from './api'
 import { createStore, useStore } from './store'
 import type { DownloadOption, MediaInfo } from './types'
 
@@ -58,6 +59,7 @@ export async function addHistoryOnce(item: HistoryItem) {
 export async function markGone(id: string) {
   const item = historyStore.get().find((i) => i.id === id)
   if (!item || item.gone) return
+  dropTicket(id)
   await addHistory({ ...item, gone: true })
 }
 

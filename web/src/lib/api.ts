@@ -1,5 +1,5 @@
 import { settingsStore } from './settings'
-import type { CookieStatus, CookieUpload, DownloadOption, Health, Job, MediaInfo } from './types'
+import type { CookieStatus, Ticket, CookieUpload, DownloadOption, Health, Job, MediaInfo } from './types'
 
 export type ApiErrorKind =
   | 'badRequest'
@@ -9,6 +9,7 @@ export type ApiErrorKind =
   | 'notFound'
   | 'network'
   | 'busy'
+  | 'rateLimited'
   | 'server'
 
 export class ApiError extends Error {
@@ -16,11 +17,14 @@ export class ApiError extends Error {
   readonly kind: ApiErrorKind
   /** Machine-readable reason for known failures, e.g. 'login_required'. */
   readonly code?: string
+  /** Seconds to wait before retrying, from the Retry-After header of a 429. */
+  readonly retryAfter?: number
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(status: number, message: string, code?: string, retryAfter?: number) {
     super(message)
     this.status = status
     this.code = code
+    this.retryAfter = retryAfter
     this.kind = kindFor(status)
   }
 }
@@ -39,6 +43,8 @@ function kindFor(status: number): ApiErrorKind {
       return 'conflict'
     case 422:
       return 'platform'
+    case 429:
+      return 'rateLimited'
     case 503:
       return 'busy'
     default:
@@ -59,6 +65,12 @@ function parseDetail(detail: unknown): { message: string; code?: string } {
   return { message: '' }
 }
 
+function parseRetryAfter(response: Response): number | undefined {
+  if (response.status !== 429) return undefined
+  const seconds = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined
+}
+
 /** Called on every 401 so the app can ask for a token. */
 let onUnauthorized: () => void = () => {}
 export const setUnauthorizedHandler = (handler: () => void) => {
@@ -67,7 +79,7 @@ export const setUnauthorizedHandler = (handler: () => void) => {
 
 const base = () => settingsStore.get().serverUrl
 
-type Target = { base?: string; token?: string }
+type Target = { base?: string; token?: string; onResponse?: (response: Response) => void }
 
 async function request<T>(path: string, init: RequestInit = {}, target: Target = {}): Promise<T> {
   const token = target.token ?? settingsStore.get().token
@@ -82,6 +94,7 @@ async function request<T>(path: string, init: RequestInit = {}, target: Target =
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError(0, 'network')
   }
+  target.onResponse?.(response)
   if (!response.ok) {
     // Ignore 401s for a token that has since been replaced, or for an explicit candidate.
     if (response.status === 401 && !target.token && token === settingsStore.get().token)
@@ -90,7 +103,7 @@ async function request<T>(path: string, init: RequestInit = {}, target: Target =
       .json()
       .then((body) => parseDetail(body?.detail))
       .catch(() => parseDetail(undefined))
-    throw new ApiError(response.status, message, code)
+    throw new ApiError(response.status, message, code, parseRetryAfter(response))
   }
   return response.status === 204 ? (undefined as T) : response.json()
 }
@@ -113,6 +126,17 @@ export const api = {
     request<void>('/api/jobs/token-check', {}, { token }).catch((error) => {
       if (!(error instanceof ApiError && error.kind === 'notFound')) throw error
     }),
+  /** A short-lived ticket for the job's events, files and ZIP links (which can't send headers). */
+  ticket: async (id: string): Promise<Ticket> => {
+    let serverDate: string | null = null
+    const body = await request<Ticket>(
+      `/api/jobs/${encodeURIComponent(id)}/ticket`,
+      { method: 'POST' },
+      { onResponse: (response) => void (serverDate = response.headers.get('Date')) },
+    )
+    // The server's own clock, so the lifetime doesn't depend on this device's clock being right.
+    return serverDate ? { ...body, server_date: serverDate } : body
+  },
   deleteJob: (id: string) =>
     request<void>(`/api/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   cookies: {
@@ -129,13 +153,74 @@ export const api = {
   },
 }
 
-/** For EventSource and plain links, which can't send an Authorization header. */
-function withToken(path: string): string {
-  const { token } = settingsStore.get()
-  return `${base()}${path}${token ? `?token=${encodeURIComponent(token)}` : ''}`
+const TICKET_MARGIN_MS = 30_000
+/** `expiresAt` is on the local clock, derived from the lifetime the server reported. */
+const tickets = new Map<string, { ticket: string; expiresAt: number }>()
+/** Requests on their way. Dropping a job's entry also detaches its request from the cache. */
+const inflight = new Map<string, Promise<string>>()
+
+/** Forget the cached ticket (and ignore one on its way), e.g. after the job went away. */
+export function dropTicket(id: string) {
+  tickets.delete(id)
+  inflight.delete(id)
 }
 
-export const eventsUrl = (id: string) => withToken(`/api/jobs/${encodeURIComponent(id)}/events`)
-export const fileUrl = (id: string, index = 0) =>
-  withToken(`/api/jobs/${encodeURIComponent(id)}/files/${index}`)
-export const zipUrl = (id: string) => withToken(`/api/jobs/${encodeURIComponent(id)}/zip`)
+/** For tests: forget every ticket. */
+export function __resetTickets() {
+  tickets.clear()
+  inflight.clear()
+}
+
+function sweepTickets(now: number) {
+  for (const [id, entry] of tickets) if (entry.expiresAt <= now) tickets.delete(id)
+}
+
+/**
+ * Remaining lifetime in ms. Uses the server's `Date` header against `expires_at` so a wrong
+ * device clock doesn't matter; without the header the two clocks are assumed to agree.
+ * NaN when `expires_at` can't be parsed.
+ */
+function lifetimeMs({ expires_at, server_date }: Ticket, now: number): number {
+  const expires = Date.parse(expires_at)
+  const serverNow = server_date ? Date.parse(server_date) : NaN
+  return expires - (Number.isFinite(serverNow) ? serverNow : now)
+}
+
+/** A valid ticket for the job: cached until ~30 s before it expires, otherwise requested anew. */
+export function ticketFor(id: string): Promise<string> {
+  const cached = tickets.get(id)
+  if (cached && cached.expiresAt - TICKET_MARGIN_MS > Date.now()) return Promise.resolve(cached.ticket)
+  tickets.delete(id)
+  const pending = inflight.get(id)
+  if (pending) return pending
+
+  const promise = api.ticket(id).then((response) => {
+    const received = Date.now()
+    // Only cache if nobody dropped the job's tickets meanwhile.
+    if (inflight.get(id) === promise) {
+      sweepTickets(received)
+      const lifetime = lifetimeMs(response, received)
+      // An unparseable expiry is never cached, so it is never reused.
+      if (Number.isFinite(lifetime)) tickets.set(id, { ticket: response.ticket, expiresAt: received + lifetime })
+    }
+    return response.ticket
+  })
+  inflight.set(id, promise)
+  const settle = () => {
+    if (inflight.get(id) === promise) inflight.delete(id)
+  }
+  promise.then(settle, settle)
+  return promise
+}
+
+/** For EventSource and downloads, which can't send an Authorization header. */
+function withTicket(path: string, ticket: string): string {
+  return `${base()}${path}?ticket=${encodeURIComponent(ticket)}`
+}
+
+export const eventsUrl = (id: string, ticket: string) =>
+  withTicket(`/api/jobs/${encodeURIComponent(id)}/events`, ticket)
+export const fileUrl = (id: string, index: number, ticket: string) =>
+  withTicket(`/api/jobs/${encodeURIComponent(id)}/files/${index}`, ticket)
+export const zipUrl = (id: string, ticket: string) =>
+  withTicket(`/api/jobs/${encodeURIComponent(id)}/zip`, ticket)

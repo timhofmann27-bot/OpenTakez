@@ -64,6 +64,10 @@ export type Mock = {
   tokenCheck: (authorization: string | undefined) => number
   resolveBodies: { url: string }[]
   jobBodies: { url: string; option: string }[]
+  /** Tickets issued by POST /api/jobs/{id}/ticket. */
+  tickets: { id: string; ticket: string }[]
+  /** Full request URLs of events/files/zip requests, in order. */
+  mediaRequests: string[]
   /** Authorization headers seen, per request path. */
   auth: { path: string; authorization: string | undefined }[]
 }
@@ -117,6 +121,8 @@ export async function mockApi(page: Page, overrides: Partial<Mock> = {}): Promis
     tokenCheck: () => 404,
     resolveBodies: [],
     jobBodies: [],
+    tickets: [],
+    mediaRequests: [],
     auth: [],
     ...overrides,
   }
@@ -174,10 +180,25 @@ export async function mockApi(page: Page, overrides: Partial<Mock> = {}): Promis
       return json(route, mock.tokenCheck(authorization), { detail: 'x' })
     }
 
-    const match = pathname.match(/^\/api\/jobs\/([^/]+)(\/events|\/files\/\d+|\/zip)?$/)
+    const match = pathname.match(/^\/api\/jobs\/([^/]+)(\/events|\/files\/\d+|\/zip|\/ticket)?$/)
     if (match) {
       const [, id, sub] = match
       const job = jobs.get(id)
+      if (sub === '/ticket') {
+        if (method !== 'POST') return json(route, 405, { detail: 'Method not allowed' })
+        if (!job) return json(route, 404, { detail: 'Job not found' })
+        const ticket = `tk-${id}-${mock.tickets.length + 1}`
+        mock.tickets.push({ id, ticket })
+        return json(route, 200, { ticket, expires_at: new Date(Date.now() + 600_000).toISOString() })
+      }
+      if (sub) {
+        // Events, files and ZIP take a ticket for this job; the master token is never accepted in URLs.
+        const params = new URL(request.url()).searchParams
+        mock.mediaRequests.push(request.url())
+        const ticket = params.get('ticket')
+        if (params.has('token') || !ticket || !mock.tickets.some((t) => t.id === id && t.ticket === ticket))
+          return json(route, 401, { detail: 'Invalid or expired ticket' })
+      }
       if (sub === '/events') {
         if (!job) return json(route, 404, { detail: 'Not found' })
         const frames = [
