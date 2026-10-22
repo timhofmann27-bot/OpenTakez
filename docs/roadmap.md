@@ -45,6 +45,11 @@ platform download. See [hosting-offer.md](hosting-offer.md).
 - Hosting: 5 € per month.
 - Not sold: paid downloads from YouTube, TikTok, Instagram, Facebook, or SoundCloud.
 
+## Later: Termux gateway
+
+An optional loopback server for people who already run Termux. See [termux.md](termux.md).
+The Android app does not connect to it (https only). Not verified on a device.
+
 ## Planned: Spotify
 
 Spotify links (tracks, albums, playlists) will be supported **without taking any audio from

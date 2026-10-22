@@ -1,4 +1,5 @@
 import re
+import shutil
 import tempfile
 import time
 from collections.abc import Callable
@@ -52,6 +53,16 @@ _PLAYLIST_TYPES = ("playlist", "multi_video")
 _CHANNELS_UNSUPPORTED = (
     "Channels and profiles aren't supported yet. Share a single post, video, or playlist."
 )
+
+
+def js_runtime_options() -> dict[str, Any]:
+    """yt-dlp enables only Deno unless told otherwise. Termux has Node, not Deno."""
+    if shutil.which("deno"):
+        return {}
+    node = shutil.which("node")
+    if not node:
+        return {}
+    return {"js_runtimes": {"node": {"path": node}}}
 
 
 def format_options(option: DownloadOption) -> dict[str, Any]:
@@ -167,6 +178,7 @@ class YtDlpProvider:
             "socket_timeout": 20,
             "retries": 3,
             "extractor_retries": 2,
+            **js_runtime_options(),
         }
 
     def _lease(self):

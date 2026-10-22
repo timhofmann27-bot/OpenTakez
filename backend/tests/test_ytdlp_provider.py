@@ -13,7 +13,7 @@ from app.providers.base import (
     MediaKind,
     ProviderError,
 )
-from app.providers.ytdlp import YtDlpProvider, format_options
+from app.providers.ytdlp import YtDlpProvider, format_options, js_runtime_options
 
 VIDEO_INFO = {
     "id": "abc",
@@ -600,3 +600,18 @@ def test_yt_dlp_cache_lives_under_the_temp_dir_for_read_only_containers():
     make_provider(ydl).resolve("https://youtube.com/watch?v=abc")
 
     assert Path(ydl.options["cachedir"]).is_relative_to(tempfile.gettempdir())
+
+
+def test_node_is_an_enabled_js_runtime_when_deno_is_absent(monkeypatch):
+    monkeypatch.setattr(
+        "app.providers.ytdlp.shutil.which",
+        lambda name: "/bin/node" if name == "node" else None,
+    )
+
+    assert js_runtime_options() == {"js_runtimes": {"node": {"path": "/bin/node"}}}
+
+
+def test_js_runtimes_stay_at_yt_dlp_default_when_neither_runtime_is_installed(monkeypatch):
+    monkeypatch.setattr("app.providers.ytdlp.shutil.which", lambda name: None)
+
+    assert js_runtime_options() == {}
