@@ -26,6 +26,8 @@ Open `http://127.0.0.1:8000` in the phone browser. The first start writes a toke
 
 The PWA is not in the git checkout (`web/dist` is gitignored). Without a copied build the API still answers `/api/health` and the browser UI is a 404. Copy a `web/dist` from a machine that ran `pnpm build`, or use the API only.
 
+Termux's Python is 3.14. `pip install -e .` alone fails because PyPI has no Android wheel for `pydantic-core` and the source build needs Rust. The script installs a third-party `pydantic-core==2.50.0` wheel (matches `pydantic==2.14.0`) and skips the `uvicorn[standard]` extras, which also lack Android wheels. That pin is Termux-only; the Docker image is unchanged.
+
 Photo posts need `gallery-dl`. If that pip install fails, video and audio still work.
 
 ## Report back
