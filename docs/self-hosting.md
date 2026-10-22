@@ -4,6 +4,14 @@ OpenTakez is one Docker image: a FastAPI server that serves the API and the PWA,
 ffmpeg, Deno, and gallery-dl inside. You run one container per instance. Nobody operates a
 public instance; read the [DISCLAIMER](../DISCLAIMER.md) first.
 
+Three installs exist. This page is only the first.
+
+| Install | When |
+| --- | --- |
+| Docker (this page) | A server you control. The supported install. |
+| [Android app](android.md) | Downloads on the phone, no server. |
+| [Termux](termux.md) | Browser on that same phone, loopback only. The Android app does not connect to it. |
+
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [The access token](#the-access-token)
@@ -39,7 +47,10 @@ docker compose up -d
 ```
 
 You only need `docker-compose.yml` and `.env.example` from the repository; cloning is the
-easiest way to get both. Open `http://<server>:8000` and enter the token (next section).
+easiest way to get both. On the server itself, open `http://127.0.0.1:8000` and enter the token
+(next section). The compose file publishes port 8000 on every interface, so do not leave that
+port reachable from the internet. A phone needs HTTPS in front (Caddy or a tunnel, below), not
+an open HTTP port.
 
 `docker-compose.yml` names the published image `ghcr.io/timhofmann27-bot/opentakez:latest` and
 also keeps `build: .`:

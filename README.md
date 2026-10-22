@@ -19,6 +19,16 @@ playlists, and carousels. Spotify is [planned](docs/roadmap.md#planned-spotify).
 
 Read the [DISCLAIMER](DISCLAIMER.md) before use.
 
+## Which install
+
+| You want | Do this |
+| --- | --- |
+| A server you control, including from your phone over HTTPS | Docker. Continue below. This is the supported install. |
+| Downloads on the phone, no server | The [Android app](docs/android.md). It does not need this container. |
+| The server inside Termux, browser on that same phone only | [docs/termux.md](docs/termux.md). Optional. The Android app will not connect to it. |
+
+Do not publish an instance without a token. `OPENTAKEZ_ALLOW_NO_TOKEN` is only for a machine nobody else can reach.
+
 ## Quick start
 
 ```sh
@@ -30,8 +40,10 @@ docker compose up -d
 docker compose logs opentakez | grep -i token   # the generated access token
 ```
 
-Open http://localhost:8000 and enter the token. To use it on a phone, serve it over HTTPS, set
-`OPENTAKEZ_ALLOWED_HOSTS` to your host name, then in Chrome on Android: menu → *Install app*.
+Open http://127.0.0.1:8000 on the server and enter the token. The published port is not limited
+to localhost, so do not leave port 8000 open to the internet. To use it on a phone, serve it
+over HTTPS, set `OPENTAKEZ_ALLOWED_HOSTS` to your host name, then in Chrome on Android: menu →
+*Install app*.
 
 **[Self-hosting guide](docs/self-hosting.md)**: HTTPS with Caddy, Cloudflare Tunnel, all
 settings, backups, updating, Raspberry Pi, troubleshooting.
