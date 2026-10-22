@@ -172,6 +172,9 @@ secrets (in the protected `release` environment) and in an offline backup of the
 signed with a different key, so every user would have to uninstall and reinstall under a new
 signature. That is why the key is backed up offline and never changes.
 
+Before a release, the maintainer runs the [device checklist](design/evidence/m6-checklist.md) on
+the signed APK.
+
 ## Google Play
 
 OpenTakez is intentionally not on Google Play, whose policies don't allow apps that download

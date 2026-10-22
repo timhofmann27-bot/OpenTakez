@@ -7,6 +7,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.1] - Unreleased
+
+A visual polish of the Android app. The server image is unchanged apart from the version number.
+
+### Changed
+
+- Android: brand colors from the app icon in light and dark mode, also on devices with
+  wallpaper-based colors; bolder headings, rounder cards, and a home screen with the logo.
+- Android: format choices wrap as chips instead of a cramped segmented row.
+- Android: the tab bar hides while the keyboard is open, submitting a link closes the keyboard,
+  and once a preview is shown only the Download button stays highlighted.
+
 ## [1.1.0] - 2026-10-22
 
 Native Android app, and a visual redesign of the PWA.

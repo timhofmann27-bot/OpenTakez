@@ -1,6 +1,6 @@
 [project]
 name = "opentakez-backend"
-version = "1.1.0"
+version = "1.1.1"
 description = "Self-hosted media downloader backend for OpenTakez"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.12"

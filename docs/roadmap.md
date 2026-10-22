@@ -12,24 +12,9 @@ requests are welcome.
 | M2 | PWA: paste or share a link, format picker, live progress, history, settings, Android share target; security hardening (generated token, limits, CSP, log redaction). |
 | M3 | TikTok, Instagram, Facebook; photo posts via gallery-dl; playlists and carousels with ZIP; cookie upload for logged-in content. |
 | M5 | Release 1.0: download tickets instead of the token in URLs, rate limits and login lockout, allowed hosts, read-only container, multi-arch images on GHCR (amd64, arm64), Dependabot, self-hosting docs. |
+| M6 | Release 1.1: native Android app (Kotlin, Jetpack Compose) that downloads on the phone with yt-dlp and ffmpeg, or sends the link to your own server; share target, queue, history, in-app yt-dlp updates; signed per-ABI APKs on GitHub Releases. See the [Android guide](android.md). |
 
 See the [changelog](../CHANGELOG.md) for details.
-
-## In progress: M6, native Android app
-
-A native app that downloads on the phone itself, without a server. Planned as release 1.1.0;
-this entry moves to *Done* when it ships. See the [Android guide](android.md).
-
-- Kotlin and Jetpack Compose, using [youtubedl-android](https://github.com/yausername/youtubedl-android)
-  (yt-dlp, ffmpeg, and Python bundled for Android), so downloads run on the device.
-- Same flow as the PWA: share a link from any app, pick a format, the file lands in the
-  device's Downloads, Music, or Pictures folder.
-- Optional: send a link to your self-hosted server instead of downloading locally. Photo posts,
-  carousels, and anything that needs a login go through the server.
-- Signed per-ABI APKs on GitHub Releases, installable and updatable with
-  [Obtainium](https://obtainium.imranr.dev). Not on Google Play: its policies don't allow apps
-  that download from YouTube.
-- yt-dlp updates inside the app, because platform fixes can't wait for an app release.
 
 ## Later: F-Droid
 
