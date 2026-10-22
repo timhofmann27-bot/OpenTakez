@@ -36,6 +36,15 @@ this entry moves to *Done* when it ships. See the [Android guide](android.md).
 An [F-Droid](https://f-droid.org) listing, once the app has settled. It needs a reproducible
 build setup and a review of the bundled binaries (yt-dlp, Python, ffmpeg).
 
+## Later: paid hosting
+
+A paid offer for a private instance only. The app stays free. No public instance, no paid
+platform download. See [hosting-offer.md](hosting-offer.md).
+
+- Setup: 29 € once.
+- Hosting: 5 € per month.
+- Not sold: paid downloads from YouTube, TikTok, Instagram, Facebook, or SoundCloud.
+
 ## Planned: Spotify
 
 Spotify links (tracks, albums, playlists) will be supported **without taking any audio from
