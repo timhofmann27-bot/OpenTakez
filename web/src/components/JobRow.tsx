@@ -73,7 +73,7 @@ export const JobRow = memo(function JobRow({ view }: { view: JobView }) {
   const retry = () => guarded(() => retryJob(view))
 
   return (
-    <li className="flex gap-3 py-3">
+    <li className="rise flex gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card">
       <Thumbnail src={info.thumbnail} kind={info.kind} className="w-20 shrink-0 self-start" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-center gap-2">

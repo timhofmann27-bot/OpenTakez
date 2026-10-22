@@ -8,7 +8,7 @@ export function Downloads() {
 
   if (!jobs.length) return <p className="pt-2 text-sm text-muted">{t('downloads.empty')}</p>
   return (
-    <ul className="divide-y divide-line">
+    <ul className="flex flex-col gap-2.5">
       {jobs.map((view) => (
         <JobRow key={view.job.id} view={view} />
       ))}

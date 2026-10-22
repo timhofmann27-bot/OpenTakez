@@ -44,7 +44,7 @@ export function TokenDialog() {
       ref={dialog}
       onClose={() => tokenPrompt.set(false)}
       aria-labelledby="token-title"
-      className="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl border border-line bg-surface p-5 text-fg backdrop:bg-black/60"
+      className="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl border border-line bg-surface p-5 text-fg shadow-card backdrop:bg-black/70 backdrop:backdrop-blur-sm"
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <h2 id="token-title" className="text-lg font-semibold">
@@ -64,7 +64,7 @@ export function TokenDialog() {
             onChange={(e) => setValue(e.target.value)}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? 'token-error' : undefined}
-            className="min-h-11 rounded-lg border border-field-line bg-bg px-3 font-mono"
+            className="min-h-11 rounded-lg border border-field-line bg-bg px-3 font-mono transition-colors focus:border-accent"
           />
         </label>
         {error && (
@@ -83,7 +83,7 @@ export function TokenDialog() {
           <button
             type="submit"
             disabled={checking}
-            className="min-h-11 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg disabled:opacity-60"
+            className="min-h-11 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg shadow-[0_8px_20px_-8px_var(--accent)] transition-transform active:scale-[0.98] disabled:opacity-60 disabled:shadow-none motion-reduce:transition-none"
           >
             {t('token.save')}
           </button>

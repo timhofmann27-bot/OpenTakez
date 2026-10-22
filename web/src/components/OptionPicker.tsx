@@ -23,7 +23,7 @@ export function OptionPicker({ options, value, onChange }: Props) {
           <span id={`option-group-${index}`} className="text-xs font-medium uppercase tracking-wide text-muted">
             {group.label}
           </span>
-          <div className="flex gap-1 rounded-xl border border-field-line bg-bg p-1">
+          <div className="flex gap-1 rounded-xl bg-surface-2 p-1 ring-1 ring-line ring-inset">
             {group.items.map((option) => (
               <label
                 key={option}

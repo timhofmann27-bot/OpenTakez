@@ -6,7 +6,7 @@ import { errorMessage } from '../lib/errors'
 import { type Lang, normalizeServerUrl, updateSettings, useSettings } from '../lib/settings'
 import type { Health } from '../lib/types'
 
-const inputClass = 'min-h-11 rounded-lg border border-field-line bg-bg px-3 text-sm'
+const inputClass = 'min-h-11 rounded-lg border border-field-line bg-bg px-3 text-sm transition-colors focus:border-accent'
 
 export function Settings() {
   const t = useT()
@@ -39,9 +39,13 @@ export function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <form onSubmit={save} className="flex flex-col gap-4" onChange={() => setSaved(false)}>
-        <h2 className="text-base font-semibold">{t('settings.server')}</h2>
+    <div className="flex flex-col gap-4">
+      <form
+        onSubmit={save}
+        className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card"
+        onChange={() => setSaved(false)}
+      >
+        <h2 className="text-xs font-medium tracking-wide text-muted uppercase">{t('settings.server')}</h2>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="server-url" className="text-sm font-medium">
@@ -86,14 +90,14 @@ export function Settings() {
           <button
             type="submit"
             disabled={normalized == null}
-            className="min-h-11 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg disabled:opacity-60"
+            className="min-h-11 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg shadow-[0_8px_20px_-8px_var(--accent)] transition-transform active:scale-[0.98] disabled:opacity-60 disabled:shadow-none motion-reduce:transition-none"
           >
             {t('settings.save')}
           </button>
           <button
             type="button"
             onClick={test}
-            className="min-h-11 rounded-lg bg-surface-2 px-4 text-sm font-medium"
+            className="min-h-11 rounded-lg bg-surface-2 px-4 text-sm font-medium ring-1 ring-line ring-inset transition-colors hover:text-fg"
           >
             {t('settings.test')}
           </button>
@@ -121,7 +125,7 @@ export function Settings() {
 
       <CookieSettings />
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 rounded-2xl border border-line bg-surface p-4 shadow-card">
         <label htmlFor="language" className="text-sm font-medium">
           {t('settings.language')}
         </label>

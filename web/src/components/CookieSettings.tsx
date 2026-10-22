@@ -69,8 +69,8 @@ function CookieList({ serverUrl }: { serverUrl: string }) {
   }
 
   return (
-    <section aria-labelledby="cookies-title" className="flex flex-col gap-4">
-      <h2 id="cookies-title" className="text-base font-semibold">
+    <section aria-labelledby="cookies-title" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card">
+      <h2 id="cookies-title" className="text-xs font-medium tracking-wide text-muted uppercase">
         {t('settings.cookies.title')}
       </h2>
       <div className="flex flex-col gap-2 text-sm text-muted">

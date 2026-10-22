@@ -13,8 +13,7 @@ export const de = {
   'url.clear': 'Leeren',
   'url.submit': 'Link prüfen',
   'url.pasteDenied': 'Kein Zugriff auf die Zwischenablage. Füge den Link direkt ins Feld ein.',
-  'home.hint':
-    'Füge einen Link von YouTube, TikTok, Instagram, Facebook oder SoundCloud ein oder teile ihn aus einer anderen App an OpenTakez.',
+  'home.hint': 'Link einfügen oder aus einer anderen App teilen.',
   'home.resolving': 'Link wird geprüft …',
 
   'preview.format': 'Format',

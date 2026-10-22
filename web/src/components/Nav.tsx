@@ -19,7 +19,7 @@ export function Nav() {
   return (
     <nav
       aria-label={t('nav.main')}
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:pb-0"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-bg/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:pb-0 sm:backdrop-blur-none"
     >
       <ul className="mx-auto flex max-w-[40rem] sm:gap-1">
         {items.map((item) => {
@@ -33,8 +33,11 @@ export function Nav() {
                   e.preventDefault()
                   navigate(item.path)
                 }}
-                className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] font-medium sm:min-h-10 sm:flex-row sm:gap-2 sm:rounded-lg sm:px-3 sm:text-sm ${current ? 'text-fg sm:bg-surface-2' : 'text-muted hover:text-fg'}`}
+                className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] font-medium sm:min-h-9 sm:flex-row sm:gap-1.5 sm:rounded-lg sm:px-2.5 sm:text-sm ${current ? 'text-accent sm:bg-accent/10 sm:text-fg' : 'text-muted hover:text-fg'}`}
               >
+                {current && (
+                  <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-accent sm:hidden" />
+                )}
                 <Icon name={item.icon} />
                 {t(item.label)}
                 {item.path === '/downloads' && active > 0 && (

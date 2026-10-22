@@ -3,28 +3,31 @@
 /* Design tokens, see docs/design/pwa-contract.md. Light by system preference, dark otherwise. */
 :root {
   color-scheme: dark;
-  --bg: #0c0c0f;
-  --surface: #17171c;
-  --surface-2: #222229;
-  --line: #2e2e37;
+  --bg: #09090d;
+  --surface: #14141a;
+  --surface-2: #1e1e26;
+  --line: #2a2a34;
   /* Form control borders need 3:1 against bg and surface (WCAG 1.4.11). */
   --field-line: #6b6b78;
-  --fg: #f2f2f5;
+  --fg: #f4f4f7;
   --muted: #a1a1ad;
   /* White text on accent ≥ 4.5:1, accent as focus ring ≥ 3:1 on bg/surface. */
   --accent: #7c3aed;
   --accent-fg: #ffffff;
   --danger: #f87171;
   --success: #4ade80;
+
+  /* Depth. Decorative only: nothing here carries meaning. */
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 18px 36px -22px rgb(0 0 0 / 0.75);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --bg: #f6f6f8;
+    --bg: #f5f5f8;
     --surface: #ffffff;
-    --surface-2: #ececf0;
-    --line: #dcdce3;
+    --surface-2: #ececf1;
+    --line: #e2e2e9;
     --field-line: #80808c;
     --fg: #18181b;
     --muted: #5d5d69;
@@ -32,6 +35,8 @@
     --accent-fg: #ffffff;
     --danger: #b91c1c;
     --success: #15803d;
+
+    --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 14px 30px -20px rgb(24 24 27 / 0.22);
   }
 }
 
@@ -54,6 +59,31 @@
   --color-instagram: #e1306c;
   --color-facebook: #1877f2;
   --color-spotify: #1ed760;
+
+  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --shadow-card: var(--shadow);
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/geist-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 html {
@@ -68,10 +98,12 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01';
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
@@ -79,8 +111,55 @@ body {
   outline-offset: 2px;
 }
 
+/* Native dialogs reset their own background; keep ours. */
+dialog {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
 @keyframes processing-stripe {
   to {
     background-position: 32px 0;
+  }
+}
+
+/* Skeleton shimmer: a highlight sweeping across the placeholder. */
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer {
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--fg) 7%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Cards rise in instead of popping. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.rise {
+  animation: rise 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer,
+  .rise {
+    animation: none;
   }
 }

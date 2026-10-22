@@ -7,9 +7,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.1.0] - Unreleased
+## [1.1.0] - 2026-10-22
 
-Native Android app. The server image is unchanged apart from the version number.
+Native Android app, and a visual redesign of the PWA.
 
 ### Added
 
@@ -35,6 +35,11 @@ Native Android app. The server image is unchanged apart from the version number.
   in an `Authorization` header (never in a URL), and is kept out of logs and notifications.
 - App backups are disabled, so the token and history can't leave the phone through a backup.
 - The app talks to servers over HTTPS only.
+
+### Changed
+
+- PWA: Geist as the typeface, a deeper surface scale with card shadows, a hero on the empty home
+  screen with platform chips, and an accent bar on the active tab. Reduced motion is respected.
 
 ## [1.0.0] - 2026-10-22
 

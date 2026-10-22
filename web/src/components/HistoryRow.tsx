@@ -61,7 +61,7 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
   }
 
   return (
-    <li className="flex gap-3 py-3">
+    <li className="rise flex gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card">
       <Thumbnail src={item.thumbnail} kind={item.kind} className="w-20 shrink-0 self-start" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">

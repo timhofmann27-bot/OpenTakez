@@ -35,7 +35,7 @@ export function PreviewCard({ info, onDownload }: Props) {
     <form
       onSubmit={submit}
       aria-label={info.title}
-      className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4"
+      className="rise flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card"
     >
       <div className={compact ? 'flex gap-4' : 'flex flex-col gap-3'}>
         <Thumbnail
@@ -53,7 +53,7 @@ export function PreviewCard({ info, onDownload }: Props) {
               </span>
             )}
           </div>
-          <h2 className="line-clamp-2 text-base font-semibold leading-snug">{info.title}</h2>
+          <h2 className="line-clamp-2 text-lg font-semibold tracking-tight leading-snug">{info.title}</h2>
           {info.uploader && <p className="truncate text-sm text-muted">{info.uploader}</p>}
         </div>
       </div>
@@ -70,7 +70,7 @@ export function PreviewCard({ info, onDownload }: Props) {
       <button
         type="submit"
         disabled={starting}
-        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-accent-fg transition-opacity disabled:opacity-60"
+        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-accent-fg shadow-[0_8px_20px_-8px_var(--accent)] transition-transform active:scale-[0.98] disabled:opacity-60 disabled:shadow-none motion-reduce:transition-none"
       >
         <Icon name="download" />
         {starting ? t('preview.starting') : t('preview.download')}

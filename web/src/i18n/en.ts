@@ -11,7 +11,7 @@ export const en = {
   'url.clear': 'Clear',
   'url.submit': 'Check link',
   'url.pasteDenied': 'Clipboard access denied. Paste into the field instead.',
-  'home.hint': 'Paste a link from YouTube, TikTok, Instagram, Facebook, or SoundCloud, or share it to OpenTakez from another app.',
+  'home.hint': 'Paste a link, or share one from another app.',
   'home.resolving': 'Checking link …',
 
   'preview.format': 'Format',

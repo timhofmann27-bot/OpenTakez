@@ -61,9 +61,9 @@ export default function App() {
 
   return (
     <div className="min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <header className="mx-auto flex max-w-[40rem] items-center gap-3 px-4 pt-4 pb-3 sm:pt-6">
+<header className="mx-auto flex max-w-[40rem] items-center gap-2.5 px-4 pt-4 pb-3 sm:pt-6">
         <img src="/mark.svg" alt="" className="size-8" />
-        <h1 ref={heading} tabIndex={-1} className="text-lg font-bold tracking-tight focus:outline-none">
+        <h1 ref={heading} tabIndex={-1} className="text-lg font-semibold tracking-tight focus:outline-none">
           {title}
         </h1>
         <div className="ml-auto hidden sm:block">

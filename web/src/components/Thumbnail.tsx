@@ -11,7 +11,7 @@ export function Thumbnail({ src, kind, className = '' }: Props) {
   const [failed, setFailed] = useState(false)
   const aspect = kind === 'video' ? 'aspect-video' : 'aspect-square'
   return (
-    <div className={`${aspect} overflow-hidden rounded-lg bg-surface-2 ${className}`}>
+    <div className={`${aspect} overflow-hidden rounded-xl bg-surface-2 ring-1 ring-line ring-inset ${className}`}>
       {src && !failed ? (
         <img
           src={src}

@@ -9,8 +9,8 @@ export function History() {
 
   if (!items.length) return <p className="pt-2 text-sm text-muted">{t('history.empty')}</p>
   return (
-    <div className="flex flex-col gap-2">
-      <ul className="divide-y divide-line">
+    <div className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-2.5">
         {items.map((item) => (
           <HistoryRow key={item.id} item={item} />
         ))}

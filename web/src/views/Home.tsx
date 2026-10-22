@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { Icon } from '../components/Icon'
+import { PlatformChip } from '../components/PlatformChip'
 import { PreviewCard } from '../components/PreviewCard'
 import { SettingsLink } from '../components/SettingsLink'
 import { useT } from '../i18n'
@@ -116,13 +117,28 @@ export function Home() {
     <div className="flex flex-col gap-4 pb-40 sm:pb-0">
 
       <section aria-live="polite" aria-busy={state.status === 'resolving'}>
-        {state.status === 'idle' && <p className="pt-2 text-sm text-muted">{t('home.hint')}</p>}
+        {state.status === 'idle' && (
+          <div className="flex flex-col items-center gap-5 px-2 pt-10 pb-6 text-center sm:pt-16">
+            <img src="/logo.svg" alt="" className="size-16 rounded-2xl shadow-card" />
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xl font-semibold tracking-tight">OpenTakez</p>
+              <p className="text-sm text-muted">{t('home.hint')}</p>
+            </div>
+            <ul className="flex max-w-full flex-wrap justify-center gap-1">
+              {['youtube', 'tiktok', 'instagram', 'facebook', 'soundcloud'].map((platform) => (
+                <li key={platform}>
+                  <PlatformChip platform={platform} compact />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {state.status === 'resolving' && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
-            <div className="aspect-video w-full animate-pulse rounded-lg bg-surface-2" />
-            <div className="h-4 w-3/4 animate-pulse rounded bg-surface-2" />
-            <div className="h-3 w-1/3 animate-pulse rounded bg-surface-2" />
+          <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-card">
+            <div className="shimmer aspect-video w-full rounded-xl bg-surface-2" />
+            <div className="shimmer h-4 w-3/4 rounded bg-surface-2" />
+            <div className="shimmer h-3 w-1/3 rounded bg-surface-2" />
             <span className="sr-only">{t('home.resolving')}</span>
           </div>
         )}
@@ -163,7 +179,7 @@ export function Home() {
           e.preventDefault()
           void resolve(text)
         }}
-        className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-bg/95 p-3 backdrop-blur sm:static sm:order-first sm:border-0 sm:bg-transparent sm:p-0"
+        className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-bg/85 p-3 backdrop-blur-md sm:static sm:order-first sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
       >
         <div className="mx-auto flex max-w-[40rem] flex-col gap-2">
           <label htmlFor="link" className="sr-only">
@@ -185,7 +201,7 @@ export function Home() {
                 onChange={(e) => setText(e.target.value)}
                 aria-invalid={state.status === 'error'}
                 aria-describedby={state.status === 'error' ? 'link-error' : undefined}
-                className="min-h-12 w-full rounded-xl border border-field-line bg-surface pr-10 pl-3 font-mono text-sm placeholder:font-sans placeholder:text-muted"
+                className="min-h-12 w-full rounded-xl border border-field-line bg-surface pr-10 pl-3 font-mono text-sm shadow-card transition-colors placeholder:font-sans placeholder:text-muted focus:border-accent sm:shadow-none"
               />
               {text && (
                 <button
@@ -201,7 +217,7 @@ export function Home() {
             {text.trim() ? (
               <button
                 type="submit"
-                className="flex min-h-12 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-fg"
+                className="flex min-h-12 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-fg shadow-[0_8px_20px_-8px_var(--accent)] transition-transform active:scale-[0.98] motion-reduce:transition-none"
               >
                 {t('url.submit')}
               </button>
@@ -209,7 +225,7 @@ export function Home() {
               <button
                 type="button"
                 onClick={paste}
-                className="flex min-h-12 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-fg"
+                className="flex min-h-12 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-fg shadow-[0_8px_20px_-8px_var(--accent)] transition-transform active:scale-[0.98] motion-reduce:transition-none"
               >
                 <Icon name="paste" />
                 {t('url.paste')}

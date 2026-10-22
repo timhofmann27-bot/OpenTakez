@@ -9,10 +9,12 @@ const colors: Record<string, string> = {
 
 import { platformName } from '../lib/platforms'
 
-export function PlatformChip({ platform }: { platform: string }) {
+export function PlatformChip({ platform, compact = false }: { platform: string; compact?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">
-      <span className={`size-2 rounded-full ${colors[platform] ?? 'bg-muted'}`} aria-hidden="true" />
+    <span
+      className={`inline-flex items-center rounded-full bg-surface-2 font-medium text-muted ring-1 ring-line ring-inset ${compact ? 'gap-1 py-0.5 pr-1.5 pl-1 text-[0.7rem]' : 'gap-1.5 py-0.5 pr-2 pl-1.5 text-xs'}`}
+    >
+      <span className={`size-1.5 rounded-full ${colors[platform] ?? 'bg-muted'}`} aria-hidden="true" />
       {platformName(platform)}
     </span>
   )
