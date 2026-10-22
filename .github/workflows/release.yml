@@ -40,7 +40,9 @@ jobs:
             found && /[^[:space:]]/ { has_content = 1 }
             END { exit !(found && has_content) }
           ' CHANGELOG.md
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+          # Checking out a tag does not necessarily leave origin/main behind.
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD || {
             echo "::error::Release commit must be on main"
             exit 1
           }
