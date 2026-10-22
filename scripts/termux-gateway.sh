@@ -51,8 +51,14 @@ pip install "$WHEEL_PATH" \
     || { echo "pydantic-core wheel install failed. Stop; do not build from source." >&2; exit 1; }
 rm -f "$WHEEL_PATH"
 pip install 'pydantic==2.14.0'
-# No [standard]: uvloop, httptools and watchfiles have no Android wheels.
-pip install -e . 'uvicorn>=0.32'
+# No extras: uvicorn[standard] pulls watchfiles, uvloop and httptools, which
+# have no Android wheels. fastapi[standard] is not required either.
+pip install -e . --no-deps
+pip install \
+    'fastapi>=0.115' \
+    'uvicorn>=0.32' \
+    'pydantic-settings>=2.6' \
+    'yt-dlp[default,curl-cffi]'
 
 if [[ ! -f "$ROOT/web/dist/index.html" ]]; then
     echo "No built PWA at web/dist. The API still runs; the browser UI will 404 until you copy a build." >&2
