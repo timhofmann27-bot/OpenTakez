@@ -48,7 +48,8 @@ platform download. See [hosting-offer.md](hosting-offer.md).
 ## Later: Termux gateway
 
 An optional loopback server for people who already run Termux. See [termux.md](termux.md).
-The Android app does not connect to it (https only). Not verified on a device.
+The Android app does not connect to it (https only). One arm64 phone completed an Instagram
+video download in the browser; CI does not run this path.
 
 ## Planned: Spotify
 

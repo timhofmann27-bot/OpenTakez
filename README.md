@@ -82,7 +82,7 @@ phone from the [releases](https://github.com/timhofmann27-bot/OpenTakez/releases
 source: [docs/android.md](docs/android.md).
 
 A Termux gateway (loopback only, not used by this app) is documented in
-[docs/termux.md](docs/termux.md). It is optional and not verified in CI.
+[docs/termux.md](docs/termux.md). It is optional. CI does not run it; one arm64 Termux phone did.
 
 ## API
 

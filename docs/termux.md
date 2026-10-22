@@ -1,6 +1,6 @@
 # Termux gateway
 
-Optional. The supported install is Docker. This page is a phone-side gateway for people who already use Termux. It was not verified on a device in CI.
+Optional. The supported install is Docker. This page is a phone-side gateway for people who already use Termux. A Termux session on an arm64 phone reached `/api/health` and completed an Instagram video download through the browser. CI does not run this path.
 
 ## What it is
 
