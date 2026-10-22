@@ -15,19 +15,26 @@ requests are welcome.
 
 See the [changelog](../CHANGELOG.md) for details.
 
-## Next: M6, native Android app
+## In progress: M6, native Android app
 
-A native app that downloads on the phone itself, without a server.
+A native app that downloads on the phone itself, without a server. Planned as release 1.1.0;
+this entry moves to *Done* when it ships. See the [Android guide](android.md).
 
-- Kotlin, using [youtubedl-android](https://github.com/yausername/youtubedl-android) (yt-dlp,
-  ffmpeg, and Python bundled for Android), so downloads run on the device.
+- Kotlin and Jetpack Compose, using [youtubedl-android](https://github.com/yausername/youtubedl-android)
+  (yt-dlp, ffmpeg, and Python bundled for Android), so downloads run on the device.
 - Same flow as the PWA: share a link from any app, pick a format, the file lands in the
-  device's Downloads or Music folder.
-- Optional: send a link to your self-hosted server instead of downloading locally.
-- Distributed through GitHub Releases, [F-Droid](https://f-droid.org), and
+  device's Downloads, Music, or Pictures folder.
+- Optional: send a link to your self-hosted server instead of downloading locally. Photo posts,
+  carousels, and anything that needs a login go through the server.
+- Signed per-ABI APKs on GitHub Releases, installable and updatable with
   [Obtainium](https://obtainium.imranr.dev). Not on Google Play: its policies don't allow apps
   that download from YouTube.
 - yt-dlp updates inside the app, because platform fixes can't wait for an app release.
+
+## Later: F-Droid
+
+An [F-Droid](https://f-droid.org) listing, once the app has settled. It needs a reproducible
+build setup and a review of the bundled binaries (yt-dlp, Python, ffmpeg).
 
 ## Planned: Spotify
 

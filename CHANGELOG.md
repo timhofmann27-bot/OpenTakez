@@ -7,6 +7,35 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - Unreleased
+
+Native Android app. The server image is unchanged apart from the version number.
+
+### Added
+
+- Android app (Kotlin, Jetpack Compose, Android 8.0+): share a link from any app, pick a format,
+  and the file is saved to `Movies`, `Music`, `Pictures`, or `Download` in an `OpenTakez`
+  folder through MediaStore.
+- Device engine: yt-dlp and ffmpeg run on the phone ([youtubedl-android](https://github.com/yausername/youtubedl-android)),
+  with an in-app yt-dlp update (before the first download, weekly, and from Settings).
+- Server engine: send the link to your own OpenTakez server (HTTPS URL and token, with
+  *Test connection*) and fetch the result. Photo posts, carousels, and content that needs a
+  login use the server.
+- Share target, download queue with progress notifications, history, and English and German
+  translations.
+- Signed APKs per CPU type (`arm64-v8a`, `armeabi-v7a`, `x86_64`) named
+  `OpenTakez-<version>-<abi>.apk`, with `SHA256SUMS`, attached to each GitHub Release by the
+  release workflow. Installable and updatable with [Obtainium](https://obtainium.imranr.dev).
+- Android guide ([docs/android.md](docs/android.md)); CI builds, lints, and tests the app;
+  Dependabot watches the Gradle dependencies.
+
+### Security
+
+- The server token is stored encrypted with a non-exportable Android Keystore key, is sent only
+  in an `Authorization` header (never in a URL), and is kept out of logs and notifications.
+- App backups are disabled, so the token and history can't leave the phone through a backup.
+- The app talks to servers over HTTPS only.
+
 ## [1.0.0] - 2026-10-22
 
 First stable release: one self-hosted Docker image with an installable PWA.
@@ -60,5 +89,6 @@ First stable release: one self-hosted Docker image with an installable PWA.
 - Documentation for self-hosting (HTTPS with Caddy, Cloudflare Tunnel, backups, updating) and
   a roadmap.
 
-[Unreleased]: https://github.com/timhofmann27-bot/OpenTakez/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/timhofmann27-bot/OpenTakez/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/timhofmann27-bot/OpenTakez/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/timhofmann27-bot/OpenTakez/releases/tag/v1.0.0
