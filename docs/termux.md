@@ -24,7 +24,7 @@ bash ~/opentakez/scripts/termux-gateway.sh
 
 Open `http://127.0.0.1:8000` in the phone browser. The first start writes a token to `~/.opentakez/token`. The script prints nothing else about it; read that file.
 
-The PWA is not in the git checkout (`web/dist` is gitignored). Without a copied build the API still answers `/api/health` and the browser UI is a 404. Copy a `web/dist` from a machine that ran `pnpm build`, or use the API only.
+The PWA is not in the git checkout (`web/dist` is gitignored). The script downloads a prebuilt tarball from the `pwa-main` prerelease when `web/dist/index.html` is missing. If that download fails, the API still answers `/api/health` and the browser UI is a 404.
 
 Termux's Python is 3.14. `pip install pydantic-core` ignores the Android wheel and tries a Rust source build, which fails. The script downloads `pydantic_core-2.50.0` for this phone's ABI and installs that file into the venv, then `pydantic==2.14.0`. It installs the backend with `--no-deps` and lists the runtime packages itself, so `uvicorn[standard]` (watchfiles, uvloop, httptools) is never pulled. That pin is Termux-only; the Docker image is unchanged.
 

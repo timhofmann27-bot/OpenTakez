@@ -61,7 +61,17 @@ pip install \
     'yt-dlp[default,curl-cffi]'
 
 if [[ ! -f "$ROOT/web/dist/index.html" ]]; then
-    echo "No built PWA at web/dist. The API still runs; the browser UI will 404 until you copy a build." >&2
+    # web/dist is gitignored. A prebuilt tarball is attached to the pwa-main prerelease.
+    PWA_URL="https://github.com/timhofmann27-bot/OpenTakez/releases/download/pwa-main/opentakez-web-dist.tar.gz"
+    PWA_TGZ="${PREFIX:-$HOME}/tmp/opentakez-web-dist.tar.gz"
+    mkdir -p "${PREFIX:-$HOME}/tmp"
+    if curl -fL --retry 3 -o "$PWA_TGZ" "$PWA_URL"; then
+        tar -C "$ROOT/web" -xzf "$PWA_TGZ"
+        rm -f "$PWA_TGZ"
+    fi
+fi
+if [[ ! -f "$ROOT/web/dist/index.html" ]]; then
+    echo "No built PWA at web/dist. The API still runs; the browser UI will 404." >&2
 fi
 
 mkdir -p "$DATA"
