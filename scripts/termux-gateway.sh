@@ -13,15 +13,26 @@ if ! command -v pkg >/dev/null 2>&1; then
     exit 1
 fi
 
-pkg install -y python ffmpeg nodejs
+pkg install -y python ffmpeg nodejs curl
 # Termux's Python is 3.14. PyPI has no Android wheel for pydantic-core, and
-# building it needs a Rust target Termux does not have. A third-party index
-# publishes cp314 Android wheels; 2.50.0 matches pydantic 2.14.0.
-# uvicorn[standard] pulls uvloop, httptools and watchfiles, which also lack
-# Android wheels, so those extras are not installed.
-pip install 'pydantic-core==2.50.0' \
-    --extra-index-url https://eutalix.github.io/android-pydantic-core/pydantic-core/ \
-    || { echo "pydantic-core Android wheel failed. Stop; do not retry a source build." >&2; exit 1; }
+# pip ignores the third-party index wheel (it then tries a Rust source build,
+# which this phone cannot do). Download the wheel and install the file.
+ARCH=$(uname -m)
+case "$ARCH" in
+    aarch64) ABI_TAG="arm64_v8a" ;;
+    arm | armv7l | armv8l) ABI_TAG="armeabi_v7a" ;;
+    x86_64) ABI_TAG="x86_64" ;;
+    i686 | i386) ABI_TAG="x86" ;;
+    *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;;
+esac
+PY_TAG=$(python -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')
+WHEEL="pydantic_core-2.50.0-${PY_TAG}-${PY_TAG}-android_24_${ABI_TAG}.whl"
+WHEEL_URL="https://github.com/Eutalix/android-pydantic-core/releases/download/v2.50.0/${WHEEL}"
+curl -fL --retry 3 -o "/tmp/${WHEEL}" "$WHEEL_URL" \
+    || { echo "pydantic-core wheel download failed. Stop; do not build from source." >&2; exit 1; }
+pip install "/tmp/${WHEEL}" \
+    || { echo "pydantic-core wheel install failed. Stop; do not build from source." >&2; exit 1; }
+rm -f "/tmp/${WHEEL}"
 pip install 'pydantic==2.14.0'
 # gallery-dl is a separate program (GPL-2.0-only). Photo posts need it; video does not.
 pip install --upgrade 'gallery-dl==1.32.17' || echo "gallery-dl install failed; photo posts will not work"
