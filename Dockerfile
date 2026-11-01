@@ -10,7 +10,7 @@ COPY web/ ./
 RUN pnpm build
 
 # --- Runtime: FastAPI serves the API and the built PWA ---
-FROM python:3.12-slim
+FROM python:3.15-slim
 LABEL org.opencontainers.image.title="OpenTakez" \
       org.opencontainers.image.description="Self-hosted media downloader (yt-dlp, gallery-dl) with an installable PWA" \
       org.opencontainers.image.source="https://github.com/timhofmann27-bot/OpenTakez" \
