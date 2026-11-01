@@ -1,7 +1,7 @@
 # --- Build the PWA ---
 # The bundle is platform-independent: build it natively on the build machine, even when the
 # runtime image is cross-built for another architecture (linux/arm64 under QEMU is slow).
-FROM --platform=$BUILDPLATFORM node:24-slim AS web
+FROM --platform=$BUILDPLATFORM node:26-slim AS web
 RUN npm install -g pnpm@11.20.0
 WORKDIR /web
 COPY web/package.json web/pnpm-lock.yaml ./
